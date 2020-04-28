@@ -65,6 +65,7 @@ gamefsm #(
 )gamefsm(
     clk, !sw[1], clk25M, clk60,
     sw[5], sw[4], sw[3],
+    sw[15:12],
     whpos, wvpos,
     write_vramA, write_ENA,
     write_vramB, write_ENB,

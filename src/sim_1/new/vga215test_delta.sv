@@ -37,6 +37,7 @@ module vga215test;
         sw[1:0] <= 2'b01;
         #50
         sw[1:0] <= 2'b11;
+        sw[3] <=1'b1;
     end
     always #5 clk <= ~clk;
     basys3_vga #(

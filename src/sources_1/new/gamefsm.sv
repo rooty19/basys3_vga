@@ -5,7 +5,8 @@ module gamefsm #(
     parameter invader01 = "invader01.txt"
 )(
     input   logic           clk, reset, clk25M, clk60,
-    input   logic           swL, swR, swW,
+    input   logic           swf2, swf1, swf0,
+    //input   logic           btnC, btnU, btnL, btnR, btnD,
     input   logic   [3:0]   speed,
     input   logic   [9:0]   whpos, wvpos,
     input   logic   [18:0]  write_vramA,
@@ -67,6 +68,7 @@ laser exist (1/0 : 2bit)| ID (2bit) | retu(0-14 (4bit)) | gyo(0-640 12bit) | col
 */
 
 logic   [39:0]    invader_table [0:49];
+logic   [39:0]    invader_tableTEMP [0:49];
 logic   [7:0]     invT_pV       [0:49];
 logic   [7:0]     invT_pH       [0:49];
 logic   [27:0]    laser_table   [0:39];
@@ -85,7 +87,7 @@ logic   [7:0]  pixeladdrH, pixeladdrV;
 //assign  pixeladdrV = invader_table[rrom_rens]>>20;
 //assign  pixeladdrH = invader_table[rrom_rens]>>12;
 assign  pixeladdrV = (wvpos%32);
-logic   [5:0]   invMS;
+logic   [6:0]   invMS;
 logic           invMSEN;
 
 logic   [7:0]   invT_pVs;
@@ -102,14 +104,21 @@ logic   [11:0]  colorpallet;
 
 logic   [2:0]   movearg; // 0^ 1> 2v 3<
 logic   [2:0]   moveNext;
+logic   [4:0]   umoveC;
+logic           movelock; // 1 .. locked
+
+logic   [1:0]   table_upS;
+
 assign invT_pVs = invT_pV[rrom_rens];
 assign invT_pHs = invT_pH[rrom_rens];
+
+genvar i;
 
 always_ff @(posedge clk25M) begin
         if(reset)begin
             invader_table[0]     <= 40'h8_000_020_fff;
             invader_table[1]     <= 40'h8_030_050_fff;
-            invader_table[2]     <= 40'h8_008_060_fff;
+            invader_table[2]     <= 40'h0_000_070_fff;
             invader_table[3]     <= 40'h0_000_080_fff;
             invader_table[4]     <= 40'h0_000_0a0_fff;
             invader_table[5]     <= 40'h0_000_0c0_fff;
@@ -157,66 +166,126 @@ always_ff @(posedge clk25M) begin
             invader_table[47]    <= 40'h0_000_000_000;
             invader_table[48]    <= 40'h0_000_000_000;
             invader_table[49]    <= 40'h0_000_000_000;
-            
+
+            invader_tableTEMP[0]     <= 40'h0_000_000_000;
+            invader_tableTEMP[1]     <= 40'h0_000_000_000;
+            invader_tableTEMP[2]     <= 40'h0_000_000_000;
+            invader_tableTEMP[3]     <= 40'h0_000_000_000;
+            invader_tableTEMP[4]     <= 40'h0_000_000_000;
+            invader_tableTEMP[5]     <= 40'h0_000_000_000;
+            invader_tableTEMP[6]     <= 40'h0_000_000_000;
+            invader_tableTEMP[7]     <= 40'h0_000_000_000;
+            invader_tableTEMP[8]     <= 40'h0_000_000_000;
+            invader_tableTEMP[9]     <= 40'h0_000_000_000;
+            invader_tableTEMP[10]    <= 40'h0_000_000_000;
+            invader_tableTEMP[11]    <= 40'h0_000_000_000;
+            invader_tableTEMP[12]    <= 40'h0_000_000_000;
+            invader_tableTEMP[13]    <= 40'h0_000_000_000;
+            invader_tableTEMP[14]    <= 40'h0_000_000_000;
+            invader_tableTEMP[15]    <= 40'h0_000_000_000;
+            invader_tableTEMP[16]    <= 40'h0_000_000_000;
+            invader_tableTEMP[17]    <= 40'h0_000_000_000;
+            invader_tableTEMP[18]    <= 40'h0_000_000_000;
+            invader_tableTEMP[19]    <= 40'h0_000_000_000;
+            invader_tableTEMP[20]    <= 40'h0_000_000_000;
+            invader_tableTEMP[21]    <= 40'h0_000_000_000;
+            invader_tableTEMP[22]    <= 40'h0_000_000_000;
+            invader_tableTEMP[23]    <= 40'h0_000_000_000;
+            invader_tableTEMP[24]    <= 40'h0_000_000_000;
+            invader_tableTEMP[25]    <= 40'h0_000_000_000;
+            invader_tableTEMP[26]    <= 40'h0_000_000_000;
+            invader_tableTEMP[27]    <= 40'h0_000_000_000;
+            invader_tableTEMP[28]    <= 40'h0_000_000_000;
+            invader_tableTEMP[29]    <= 40'h0_000_000_000;
+            invader_tableTEMP[30]    <= 40'h0_000_000_000;
+            invader_tableTEMP[31]    <= 40'h0_000_000_000;
+            invader_tableTEMP[32]    <= 40'h0_000_000_000;
+            invader_tableTEMP[33]    <= 40'h0_000_000_000;
+            invader_tableTEMP[34]    <= 40'h0_000_000_000;
+            invader_tableTEMP[35]    <= 40'h0_000_000_000;
+            invader_tableTEMP[36]    <= 40'h0_000_000_000;
+            invader_tableTEMP[37]    <= 40'h0_000_000_000;
+            invader_tableTEMP[38]    <= 40'h0_000_000_000;
+            invader_tableTEMP[39]    <= 40'h0_000_000_000;
+            invader_tableTEMP[40]    <= 40'h0_000_000_000;
+            invader_tableTEMP[41]    <= 40'h0_000_000_000;
+            invader_tableTEMP[42]    <= 40'h0_000_000_000;
+            invader_tableTEMP[43]    <= 40'h0_000_000_000;
+            invader_tableTEMP[44]    <= 40'h0_000_000_000;
+            invader_tableTEMP[45]    <= 40'h0_000_000_000;
+            invader_tableTEMP[46]    <= 40'h0_000_000_000;
+            invader_tableTEMP[47]    <= 40'h0_000_000_000;
+            invader_tableTEMP[48]    <= 40'h0_000_000_000;
+            invader_tableTEMP[49]    <= 40'h0_000_000_000;
+
             //pixeladdrH <= 1'b0;
-            invMS <= 6'd0;
+            invMS <= 7'd0;
             invMSEN <= 1'b0;
             movearg <= 1'b1;
             moveNext <= 1'b1;
+            movelock <= 1'b0;
         end else begin
             if(clk60&(invMSEN == 0))begin
                 invMSEN <= 1'b1;
                 movearg <= moveNext;
+                movelock <= 0;
+                table_upS <= 2'b00;
             end else if(invMSEN)begin
-                if(((invader_table[invMS]&40'h8_000_000_000) == 40'h8_000_000_000)&swW) begin
-                    case(movearg)
-                        2'd0:begin
-                            if((invader_table[invMS]&40'h0_fff_000_000)>= 40'h0_010_000_000)begin
-                                invader_table[invMS] <= ((invader_table[invMS]&40'hf_000_fff_fff) + {(invader_table[invMS]&40'h0_fff_000_000) - {12'h0, speed, 24'h000000}});
+                if(table_upS == 2'b00)begin
+                    if(((invader_table[invMS]&40'h8_000_000_000) == 40'h8_000_000_000)&swf0) begin
+                        case(movearg)
+                            2'd0:begin
+                                if((invader_table[invMS]&40'h0_fff_000_000)>= 40'h0_010_000_000)begin
+                                invader_tableTEMP[invMS] <= ((invader_table[invMS]&40'hf_000_fff_fff) + {(invader_table[invMS]&40'h0_fff_000_000) - {12'h0, speed, 24'h000000}});
                             end else begin
-                                invader_table[invMS] <= invader_table[invMS];
+                                invader_tableTEMP[invMS] <= invader_table[invMS];
                                 moveNext <= 1;
+                                movelock <= 1;
                             end
                         end
                         2'd1:begin
-                            if((invader_table[invMS]&40'h0_000_fff_000)< 40'h0_000_260_000)begin
-                                invader_table[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff) + {(invader_table[invMS]&40'h0_000_fff_000) + {24'h0, speed, 12'h000}});
+                            if((invader_table[invMS]&40'h0_000_fff_000)< 40'h0_000_250_000)begin
+                                invader_tableTEMP[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff) + {(invader_table[invMS]&40'h0_000_fff_000) + {24'h0, speed, 12'h000}});
                             end else begin
-                                invader_table[invMS] <= invader_table[invMS];
+                                invader_tableTEMP[invMS] <= invader_table[invMS];
                                 moveNext <= 2;
+                                movelock <= 1;
                             end
                         end
                         2'd2:begin
                             if((invader_table[invMS]&40'h0_fff_000_000)< 40'h0_1c0_000_000)begin
-                                invader_table[invMS] <= ((invader_table[invMS]&40'hf_000_fff_fff) + {(invader_table[invMS]&40'h0_fff_000_000) + {12'h0, speed, 24'h000000}});
+                                invader_tableTEMP[invMS] <= ((invader_table[invMS]&40'hf_000_fff_fff) + {(invader_table[invMS]&40'h0_fff_000_000) + 40'h0_001_000_000});
+                                umoveC <= umoveC + 1;
+                                moveNext <= (umoveC == 31) ?3:2;
                             end else begin
-                                invader_table[invMS] <= invader_table[invMS];
+                                invader_tableTEMP[invMS] <= invader_table[invMS];
                                 moveNext <=3;
+                                movelock <= 1;
                             end
                         end
                         2'd3:begin
                             if((invader_table[invMS]&40'h0_000_fff_000)>= 40'h0_000_010_000)begin
-                                invader_table[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff) + {(invader_table[invMS]&40'h0_000_fff_000) - {24'h0, speed, 12'h000}});
+                                invader_tableTEMP[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff) + {(invader_table[invMS]&40'h0_000_fff_000) - {24'h0, speed, 12'h000}});
                             end else begin
-                                invader_table[invMS] <= invader_table[invMS];
-                                moveNext <= 0;
+                                invader_tableTEMP[invMS] <= invader_table[invMS];
+                                moveNext <= 1;
+                                movelock <= 1;
                             end
                         end
-                    endcase
-                    
-                    /*
-                    if ((invader_table[invMS]&40'h0_000_fff_000)<= 40'h0_000_25f_000) begin
-                        invader_table[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff) + {(invader_table[invMS]&40'h0_000_fff_000) + {24'h0, speed, 12'h000}});
-                    end else begin
-                        invader_table[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff));
+                        endcase
+                    end begin
+                        invT_pV[invMS] <= 8'h00;
+                        invT_pH[invMS] <= 8'h00; 
+                        invMS <= (invMS == 49) ? 0 : invMS + 1;
+                        //invMSEN <= (invMS == 100) ? 0 : 1;
+                        table_upS <= (invMS == 49) ? 2'b01 : 2'b00;
                     end
-                    */ 
-                end begin
-                    invT_pV[invMS] <= 8'h00;
-                    invT_pH[invMS] <= 8'h00; 
-                    invMS <= (invMS == 49) ? 0 : invMS + 1;
-                    invMSEN <= (invMS == 49) ? 0 : 1;
-                end
+                end else if(table_upS == 2'b01)begin
+                        invader_table[invMS] <= (movelock) ? invader_table[invMS] : invader_tableTEMP[invMS];
+                        invMS <= (invMS == 49) ? 0 : invMS + 1;
+                        invMSEN <= (invMS == 49) ? 0 : 1;
+                        table_upS <= (invMS == 49) ? 2'b00 : 2'b01;
+                end    
             end else begin
                 if(rrom_rens != 50)begin
                     if(rrom_ren[rrom_rens] & write_ENA)begin
@@ -362,6 +431,5 @@ always_ff @(posedge clk60) begin
             end
     end
 end
-//角�???????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��場合�???????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��ス??????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?ート�??り替えした�???????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��ちに移??????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?
 */
 endmodule

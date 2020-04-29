@@ -10,6 +10,7 @@ module basys3_vga #(
     output  logic   [6:0]    seg,
     output  logic            dp,
     output  logic   [3:0]    an,
+    input   logic            btnC, btnU, btnL, btnR, btnD,
     output  logic   [7:0]    JA,
     output  logic   [3:0]    vgaRed, vgaBlue, vgaGreen,
     output  logic            Hsync, Vsync

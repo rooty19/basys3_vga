@@ -23,6 +23,7 @@
 module vga215test;
     logic            clk;
     logic   [15:0]   sw;
+    logic            btnC, btnU, btnL, btnR, btnD;
     logic   [6:0]    seg;
     logic            dp;
     logic   [3:0]    an;
@@ -33,6 +34,7 @@ module vga215test;
     initial begin
         sw[1:0] <= 2'b00;
         clk <= 1'b0;
+        {btnC, btnU, btnL, btnR, btnD} <= 5'b0;
         #10
         sw[1:0] <= 2'b01;
         #50

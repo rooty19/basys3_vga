@@ -59,7 +59,7 @@ invader_stateT invader_state;
 */
 /*
 invader table align (word: 0: canon, 1-49 invader)
-invader exist(1/0 : 2bit) | ID (6bit) | start vpos(0-480 12bit) | start hpos(0-640 12bit) | Now paV(8bit) | Now paH(8bit) | color (0x000-0xfff 12bit)
+invader exist(1/0 : 2bit) | ID (6bit) | start vpos(0-480 12bit) | start hpos(0-640 12bit) | color (0x000-0xfff 12bit)
 
 laser
 laser table align (word 0 cannon, 1-40 laser)
@@ -100,50 +100,52 @@ logic   [49:0]  rrom_whpos;
 logic   [49:0]  rrom_wvpos;
 logic   [11:0]  colorpallet;
 
+logic   [2:0]   movearg; // 0^ 1> 2v 3<
+logic   [2:0]   moveNext;
 assign invT_pVs = invT_pV[rrom_rens];
 assign invT_pHs = invT_pH[rrom_rens];
 
 always_ff @(posedge clk25M) begin
         if(reset)begin
             invader_table[0]     <= 40'h8_000_020_fff;
-            invader_table[1]     <= 40'h8_000_040_fff;
-            invader_table[2]     <= 40'h8_000_060_fff;
-            invader_table[3]     <= 40'h8_000_080_fff;
-            invader_table[4]     <= 40'h8_000_0a0_fff;
-            invader_table[5]     <= 40'h8_000_0c0_fff;
-            invader_table[6]     <= 40'h8_000_0e0_fff;
-            invader_table[7]     <= 40'h8_000_100_fff;
-            invader_table[8]     <= 40'h8_000_120_fff;
-            invader_table[9]     <= 40'h8_000_140_fff;
-            invader_table[10]    <= 40'h8_000_160_fff;
-            invader_table[11]    <= 40'h8_000_180_fff;
-            invader_table[12]    <= 40'h8_000_1a0_fff;
-            invader_table[13]    <= 40'h8_000_1c0_fff;
-            invader_table[14]    <= 40'h8_000_1e0_fff;
-            invader_table[15]    <= 40'h8_000_200_fff;
-            invader_table[16]    <= 40'h8_000_220_fff;
-            invader_table[17]    <= 40'h8_000_240_fff;
-            invader_table[18]    <= 40'h8_000_260_fff;
-            invader_table[19]    <= 40'h8_020_000_fff;
-            invader_table[20]    <= 40'h8_020_020_fff;
-            invader_table[21]    <= 40'h8_020_040_fff;
-            invader_table[22]    <= 40'h8_020_060_fff;
-            invader_table[23]    <= 40'h8_020_080_fff;
-            invader_table[24]    <= 40'h8_020_0a0_fff;
-            invader_table[25]    <= 40'h8_020_0c0_fff;
-            invader_table[26]    <= 40'h8_020_0e0_fff;
-            invader_table[27]    <= 40'h8_020_100_fff;
-            invader_table[28]    <= 40'h8_020_120_fff;
-            invader_table[29]    <= 40'h8_020_140_fff;
-            invader_table[30]    <= 40'h8_020_160_fff;
-            invader_table[31]    <= 40'h8_020_180_fff;
-            invader_table[32]    <= 40'h8_020_1a0_fff;
-            invader_table[33]    <= 40'h8_020_1c0_fff;
-            invader_table[34]    <= 40'h8_020_1e0_fff;
-            invader_table[35]    <= 40'h8_020_200_fff;
-            invader_table[36]    <= 40'h8_020_220_fff;
-            invader_table[37]    <= 40'h8_020_240_fff;
-            invader_table[38]    <= 40'h8_020_260_fff;
+            invader_table[1]     <= 40'h8_030_050_fff;
+            invader_table[2]     <= 40'h8_008_060_fff;
+            invader_table[3]     <= 40'h0_000_080_fff;
+            invader_table[4]     <= 40'h0_000_0a0_fff;
+            invader_table[5]     <= 40'h0_000_0c0_fff;
+            invader_table[6]     <= 40'h0_000_0e0_fff;
+            invader_table[7]     <= 40'h0_000_100_fff;
+            invader_table[8]     <= 40'h0_000_120_fff;
+            invader_table[9]     <= 40'h0_000_140_fff;
+            invader_table[10]    <= 40'h0_000_160_fff;
+            invader_table[11]    <= 40'h0_000_180_fff;
+            invader_table[12]    <= 40'h0_000_1a0_fff;
+            invader_table[13]    <= 40'h0_000_1c0_fff;
+            invader_table[14]    <= 40'h0_000_1e0_fff;
+            invader_table[15]    <= 40'h0_000_200_fff;
+            invader_table[16]    <= 40'h0_000_220_fff;
+            invader_table[17]    <= 40'h0_000_240_fff;
+            invader_table[18]    <= 40'h0_000_260_fff;
+            invader_table[19]    <= 40'h0_020_000_fff;
+            invader_table[20]    <= 40'h0_020_020_fff;
+            invader_table[21]    <= 40'h0_020_040_fff;
+            invader_table[22]    <= 40'h0_020_060_fff;
+            invader_table[23]    <= 40'h0_020_080_fff;
+            invader_table[24]    <= 40'h0_020_0a0_fff;
+            invader_table[25]    <= 40'h0_020_0c0_fff;
+            invader_table[26]    <= 40'h0_020_0e0_fff;
+            invader_table[27]    <= 40'h0_020_100_fff;
+            invader_table[28]    <= 40'h0_020_120_fff;
+            invader_table[29]    <= 40'h0_020_140_fff;
+            invader_table[30]    <= 40'h0_020_160_fff;
+            invader_table[31]    <= 40'h0_020_180_fff;
+            invader_table[32]    <= 40'h0_020_1a0_fff;
+            invader_table[33]    <= 40'h0_020_1c0_fff;
+            invader_table[34]    <= 40'h0_020_1e0_fff;
+            invader_table[35]    <= 40'h0_020_200_fff;
+            invader_table[36]    <= 40'h0_020_220_fff;
+            invader_table[37]    <= 40'h0_020_240_fff;
+            invader_table[38]    <= 40'h0_020_260_fff;
             invader_table[39]    <= 40'h0_000_000_000;
             invader_table[40]    <= 40'h0_000_000_000;
             invader_table[41]    <= 40'h0_000_000_000;
@@ -159,16 +161,56 @@ always_ff @(posedge clk25M) begin
             //pixeladdrH <= 1'b0;
             invMS <= 6'd0;
             invMSEN <= 1'b0;
+            movearg <= 1'b1;
+            moveNext <= 1'b1;
         end else begin
             if(clk60&(invMSEN == 0))begin
                 invMSEN <= 1'b1;
+                movearg <= moveNext;
             end else if(invMSEN)begin
                 if(((invader_table[invMS]&40'h8_000_000_000) == 40'h8_000_000_000)&swW) begin
+                    case(movearg)
+                        2'd0:begin
+                            if((invader_table[invMS]&40'h0_fff_000_000)>= 40'h0_010_000_000)begin
+                                invader_table[invMS] <= ((invader_table[invMS]&40'hf_000_fff_fff) + {(invader_table[invMS]&40'h0_fff_000_000) - {12'h0, speed, 24'h000000}});
+                            end else begin
+                                invader_table[invMS] <= invader_table[invMS];
+                                moveNext <= 1;
+                            end
+                        end
+                        2'd1:begin
+                            if((invader_table[invMS]&40'h0_000_fff_000)< 40'h0_000_260_000)begin
+                                invader_table[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff) + {(invader_table[invMS]&40'h0_000_fff_000) + {24'h0, speed, 12'h000}});
+                            end else begin
+                                invader_table[invMS] <= invader_table[invMS];
+                                moveNext <= 2;
+                            end
+                        end
+                        2'd2:begin
+                            if((invader_table[invMS]&40'h0_fff_000_000)< 40'h0_1c0_000_000)begin
+                                invader_table[invMS] <= ((invader_table[invMS]&40'hf_000_fff_fff) + {(invader_table[invMS]&40'h0_fff_000_000) + {12'h0, speed, 24'h000000}});
+                            end else begin
+                                invader_table[invMS] <= invader_table[invMS];
+                                moveNext <=3;
+                            end
+                        end
+                        2'd3:begin
+                            if((invader_table[invMS]&40'h0_000_fff_000)>= 40'h0_000_010_000)begin
+                                invader_table[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff) + {(invader_table[invMS]&40'h0_000_fff_000) - {24'h0, speed, 12'h000}});
+                            end else begin
+                                invader_table[invMS] <= invader_table[invMS];
+                                moveNext <= 0;
+                            end
+                        end
+                    endcase
+                    
+                    /*
                     if ((invader_table[invMS]&40'h0_000_fff_000)<= 40'h0_000_25f_000) begin
                         invader_table[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff) + {(invader_table[invMS]&40'h0_000_fff_000) + {24'h0, speed, 12'h000}});
                     end else begin
                         invader_table[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff));
-                    end 
+                    end
+                    */ 
                 end begin
                     invT_pV[invMS] <= 8'h00;
                     invT_pH[invMS] <= 8'h00; 
@@ -178,12 +220,6 @@ always_ff @(posedge clk25M) begin
             end else begin
                 if(rrom_rens != 50)begin
                     if(rrom_ren[rrom_rens] & write_ENA)begin
-                        /*
-                        if(invT_pH[rrom_rens] == 8'd31) begin // 1 pixel 下に移動
-                            invT_pV[rrom_rens] <= (invT_pV[rrom_rens] == 8'd31) ? 8'h00 : invT_pV[rrom_rens] + 8'h01;
-                            invT_pH[rrom_rens] <= 8'h00;
-                        end else invT_pH[rrom_rens] <= invT_pH[rrom_rens] + 8'h01;    
-                        */
                         invT_pH[rrom_rens] <= (whpos==rrom_hpos[rrom_rens]) ? 0 : (whpos==rrom_hpos[rrom_rens]+31) ? 0 : invT_pH[rrom_rens] + 1;
                         invT_pV[rrom_rens] <= (whpos==rrom_hpos[rrom_rens]+31) ? invT_pV[rrom_rens] + 1 : invT_pV[rrom_rens];
                     end begin
@@ -326,6 +362,6 @@ always_ff @(posedge clk60) begin
             end
     end
 end
-//角�??????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��場合�??????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��ス?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?ート�??り替えした�??????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��ちに移?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?
+//角�???????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��場合�???????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��ス??????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?ート�??り替えした�???????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��ちに移??????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?????��?��??��?��???��?��??��?��????��?��??��?��???��?��??��?��?
 */
 endmodule

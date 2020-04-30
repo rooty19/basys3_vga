@@ -117,9 +117,9 @@ genvar i;
 always_ff @(posedge clk25M) begin
         if(reset)begin
             invader_table[0]     <= 40'h8_000_020_fff;
-            invader_table[1]     <= 40'h8_030_050_fff;
-            invader_table[2]     <= 40'h0_000_070_fff;
-            invader_table[3]     <= 40'h0_000_080_fff;
+            invader_table[1]     <= 40'h8_020_050_fff;
+            invader_table[2]     <= 40'h8_000_070_fff;
+            invader_table[3]     <= 40'h8_040_020_fff;
             invader_table[4]     <= 40'h0_000_0a0_fff;
             invader_table[5]     <= 40'h0_000_0c0_fff;
             invader_table[6]     <= 40'h0_000_0e0_fff;
@@ -224,6 +224,7 @@ always_ff @(posedge clk25M) begin
             movearg <= 1'b1;
             moveNext <= 1'b1;
             movelock <= 1'b0;
+            umoveC <= 0;
         end else begin
             if(clk60&(invMSEN == 0))begin
                 invMSEN <= 1'b1;
@@ -253,10 +254,11 @@ always_ff @(posedge clk25M) begin
                             end
                         end
                         2'd2:begin
-                            if((invader_table[invMS]&40'h0_fff_000_000)< 40'h0_1c0_000_000)begin
+                            if(((invader_table[invMS]&40'h0_fff_000_000)< 40'h0_1c0_000_000)&umoveC!=31)begin
                                 invader_tableTEMP[invMS] <= ((invader_table[invMS]&40'hf_000_fff_fff) + {(invader_table[invMS]&40'h0_fff_000_000) + 40'h0_001_000_000});
-                                umoveC <= umoveC + 1;
+                                //umoveC <= umoveC + 1;
                                 moveNext <= (umoveC == 31) ?3:2;
+                                //moveNext <= 3;
                             end else begin
                                 invader_tableTEMP[invMS] <= invader_table[invMS];
                                 moveNext <=3;
@@ -285,6 +287,7 @@ always_ff @(posedge clk25M) begin
                         invMS <= (invMS == 49) ? 0 : invMS + 1;
                         invMSEN <= (invMS == 49) ? 0 : 1;
                         table_upS <= (invMS == 49) ? 2'b00 : 2'b01;
+                        umoveC <= (umoveC == 31) ? ((invMS == 49)? 0 : umoveC) : ((invMS == 49)? umoveC + 1 : umoveC);
                 end    
             end else begin
                 if(rrom_rens != 50)begin

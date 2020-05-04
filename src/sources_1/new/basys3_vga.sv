@@ -1,9 +1,9 @@
 `include "vhclk_gen.v"
-`include "gamefsm.sv"
+//`include "gamefsm.sv"
 module basys3_vga #(
     parameter intable = "intable.txt",
     parameter latable = "latable.txt",
-    parameter invader01 = "invader01.txt"
+    parameter invader00 = "picture/invader00.txt"
 )(
     input   logic            clk,
     input   logic   [15:0]   sw,
@@ -57,12 +57,12 @@ logic  clk60;
 assign clk60 = ((vpos == 480) & (hpos == 0)) ? 1 : 0;
 
 always_ff @(posedge clk25M) WvramCS <= RvramCS;
-assign {vgaRed,  vgaGreen, vgaBlue} = (display_en) ? vdout : 12'h000;
+assign {vgaBlue, vgaGreen, vgaRed} = (display_en) ? vdout : 12'h000;
 
 gamefsm #(
     .intable(intable),
     .latable(latable),
-    .invader01(invader01)
+    .invader00(invader00)
 )gamefsm(
     clk, !sw[1], clk25M, clk60,
     sw[5], sw[4], sw[3],

@@ -2,7 +2,7 @@ module gamefsm #(
     parameter rad = 8,
     parameter intable = "intable.txt",
     parameter latable = "latable.txt",
-    parameter invader01 = "invader01.txt"
+    parameter invader00 = "picture/invader00.txt"
 )(
     input   logic           clk, reset, clk25M, clk60,
     input   logic           swf2, swf1, swf0,
@@ -67,156 +67,196 @@ laser table align (word 0 cannon, 1-40 laser)
 laser exist (1/0 : 2bit)| ID (2bit) | retu(0-14 (4bit)) | gyo(0-640 12bit) | color (0x000-0xfff 12bit)
 */
 
-logic   [39:0]    invader_table [0:49];
-logic   [39:0]    invader_tableTEMP [0:49];
-logic   [7:0]     invT_pV       [0:49];
-logic   [7:0]     invT_pH       [0:49];
-logic   [27:0]    laser_table   [0:39];
+logic   [51:0]    invader_table [0:62];
+logic   [51:0]    invader_tableTEMP [0:62];
+logic   [7:0]     invT_pV       [0:62];
+logic   [7:0]     invT_pH       [0:62];
+
+logic   [31:0]    inv00A        [0:31];
 logic   [31:0]    inv01A        [0:31];
+logic   [31:0]    inv02A        [0:31];
+logic   [31:0]    inv03A        [0:31];
+logic   [31:0]    inv04A        [0:31];
+logic   [31:0]    inv05A        [0:31];
+logic   [11:0]    inv00B        [0:16383];
+logic   [11:0]    inv01B        [0:16383];
+
+logic   [27:0]    laser_table   [0:39];
 
 initial begin
     //$readmemh(intable, invader_table);
     $readmemh(latable, laser_table);
     $readmemh("invTs.txt", invT_pV);
     $readmemh("invTs.txt", invT_pH);
-    $readmemb(invader01, inv01A);
+    $readmemb(invader00, inv00A);
+    $readmemb("picture/space.txt", inv01A);
+    $readmemb("picture/space.txt", inv02A);
+    $readmemb("picture/space.txt", inv03A);
+    $readmemb("picture/space.txt", inv04A);
+    $readmemb("picture/space.txt", inv05A);
+    $readmemh("picture/karubabu.txt", inv00B);
+    $readmemh("picture/fire.txt", inv01B);
 end
 
-logic   [7:0]  pixeladdrH, pixeladdrV;
-
-//assign  pixeladdrV = invader_table[rrom_rens]>>20;
-//assign  pixeladdrH = invader_table[rrom_rens]>>12;
-assign  pixeladdrV = (wvpos%32);
 logic   [6:0]   invMS;
 logic           invMSEN;
 
 logic   [7:0]   invT_pVs;
 logic   [7:0]   invT_pHs;
 
-logic   [49:0]  rrom_ren;
+logic   [63:0]  rrom_ren;
 logic   [5:0]   rrom_rens;
-logic   [49:0]  rrom_EN;
-logic   [11:0]  rrom_vpos  [49:0];
-logic   [11:0]  rrom_hpos  [49:0];
-logic   [49:0]  rrom_whpos;
-logic   [49:0]  rrom_wvpos;
+logic   [63:0]  rrom_EN;
+logic   [11:0]  rrom_vpos  [62:0];
+logic   [11:0]  rrom_hpos  [62:0];
+logic   [7:0]   rrom_size  [62:0];
+logic   [63:0]  rrom_whpos;
+logic   [63:0]  rrom_wvpos;
 logic   [11:0]  colorpallet;
+//logic   [3:0]   rrom_colorM  [62:0];
+logic   [2:0]   rrom_ID [62:0];
 
-logic   [2:0]   movearg; // 0^ 1> 2v 3<
-logic   [2:0]   moveNext;
+logic   [1:0]   movearg; // 0^ 1> 2v 3<
+logic   [1:0]   moveNext;
 logic   [4:0]   umoveC;
 logic           movelock; // 1 .. locked
 
+logic   [15:0]  invT_p12;
 logic   [1:0]   table_upS;
 
 assign invT_pVs = invT_pV[rrom_rens];
 assign invT_pHs = invT_pH[rrom_rens];
-
+assign invT_p12 = invT_pV[rrom_rens] * rrom_size[rrom_rens] + invT_pH[rrom_rens];
 genvar i;
 
 always_ff @(posedge clk25M) begin
         if(reset)begin
-            invader_table[0]     <= 40'h8_000_020_fff;
-            invader_table[1]     <= 40'h8_030_050_fff;
-            invader_table[2]     <= 40'h0_000_070_fff;
-            invader_table[3]     <= 40'h0_000_080_fff;
-            invader_table[4]     <= 40'h0_000_0a0_fff;
-            invader_table[5]     <= 40'h0_000_0c0_fff;
-            invader_table[6]     <= 40'h0_000_0e0_fff;
-            invader_table[7]     <= 40'h0_000_100_fff;
-            invader_table[8]     <= 40'h0_000_120_fff;
-            invader_table[9]     <= 40'h0_000_140_fff;
-            invader_table[10]    <= 40'h0_000_160_fff;
-            invader_table[11]    <= 40'h0_000_180_fff;
-            invader_table[12]    <= 40'h0_000_1a0_fff;
-            invader_table[13]    <= 40'h0_000_1c0_fff;
-            invader_table[14]    <= 40'h0_000_1e0_fff;
-            invader_table[15]    <= 40'h0_000_200_fff;
-            invader_table[16]    <= 40'h0_000_220_fff;
-            invader_table[17]    <= 40'h0_000_240_fff;
-            invader_table[18]    <= 40'h0_000_260_fff;
-            invader_table[19]    <= 40'h0_020_000_fff;
-            invader_table[20]    <= 40'h0_020_020_fff;
-            invader_table[21]    <= 40'h0_020_040_fff;
-            invader_table[22]    <= 40'h0_020_060_fff;
-            invader_table[23]    <= 40'h0_020_080_fff;
-            invader_table[24]    <= 40'h0_020_0a0_fff;
-            invader_table[25]    <= 40'h0_020_0c0_fff;
-            invader_table[26]    <= 40'h0_020_0e0_fff;
-            invader_table[27]    <= 40'h0_020_100_fff;
-            invader_table[28]    <= 40'h0_020_120_fff;
-            invader_table[29]    <= 40'h0_020_140_fff;
-            invader_table[30]    <= 40'h0_020_160_fff;
-            invader_table[31]    <= 40'h0_020_180_fff;
-            invader_table[32]    <= 40'h0_020_1a0_fff;
-            invader_table[33]    <= 40'h0_020_1c0_fff;
-            invader_table[34]    <= 40'h0_020_1e0_fff;
-            invader_table[35]    <= 40'h0_020_200_fff;
-            invader_table[36]    <= 40'h0_020_220_fff;
-            invader_table[37]    <= 40'h0_020_240_fff;
-            invader_table[38]    <= 40'h0_020_260_fff;
-            invader_table[39]    <= 40'h0_000_000_000;
-            invader_table[40]    <= 40'h0_000_000_000;
-            invader_table[41]    <= 40'h0_000_000_000;
-            invader_table[42]    <= 40'h0_000_000_000;
-            invader_table[43]    <= 40'h0_000_000_000;
-            invader_table[44]    <= 40'h0_000_000_000;
-            invader_table[45]    <= 40'h0_000_000_000;
-            invader_table[46]    <= 40'h0_000_000_000;
-            invader_table[47]    <= 40'h0_000_000_000;
-            invader_table[48]    <= 40'h0_000_000_000;
-            invader_table[49]    <= 40'h0_000_000_000;
+            invader_table[0]     <= 52'h8_000_000_20_0_fff;
+            invader_table[1]     <= 52'h8_020_020_80_6_fff;
+            invader_table[2]     <= 52'h8_080_030_80_7_fff;
+            invader_table[3]     <= 52'h0_000_080_20_0_fff;
+            invader_table[4]     <= 52'h0_000_0a0_20_0_fff;
+            invader_table[5]     <= 52'h0_000_0c0_20_0_fff;
+            invader_table[6]     <= 52'h0_000_0e0_20_0_fff;
+            invader_table[7]     <= 52'h0_000_100_20_0_fff;
+            invader_table[8]     <= 52'h0_000_120_20_0_fff;
+            invader_table[9]     <= 52'h0_000_140_20_0_fff;
+            invader_table[10]    <= 52'h0_000_160_20_0_fff;
+            invader_table[11]    <= 52'h0_000_180_20_0_fff;
+            invader_table[12]    <= 52'h0_000_1a0_20_0_fff;
+            invader_table[13]    <= 52'h0_000_1c0_20_0_fff;
+            invader_table[14]    <= 52'h0_000_1e0_20_0_fff;
+            invader_table[15]    <= 52'h0_000_200_20_0_fff;
+            invader_table[16]    <= 52'h0_000_220_20_0_fff;
+            invader_table[17]    <= 52'h0_000_240_20_0_fff;
+            invader_table[18]    <= 52'h0_000_260_20_0_fff;
+            invader_table[19]    <= 52'h0_020_000_20_0_fff;
+            invader_table[20]    <= 52'h0_020_020_20_0_fff;
+            invader_table[21]    <= 52'h0_020_040_20_0_fff;
+            invader_table[22]    <= 52'h0_020_060_20_0_fff;
+            invader_table[23]    <= 52'h0_020_080_20_0_fff;
+            invader_table[24]    <= 52'h0_020_0a0_20_0_fff;
+            invader_table[25]    <= 52'h0_020_0c0_20_0_fff;
+            invader_table[26]    <= 52'h0_020_0e0_20_0_fff;
+            invader_table[27]    <= 52'h0_020_100_20_0_fff;
+            invader_table[28]    <= 52'h0_020_120_20_0_fff;
+            invader_table[29]    <= 52'h0_020_140_20_0_fff;
+            invader_table[30]    <= 52'h0_020_160_20_0_fff;
+            invader_table[31]    <= 52'h0_020_180_20_0_fff;
+            invader_table[32]    <= 52'h0_020_1a0_20_0_fff;
+            invader_table[33]    <= 52'h0_020_1c0_20_0_fff;
+            invader_table[34]    <= 52'h0_020_1e0_20_0_fff;
+            invader_table[35]    <= 52'h0_020_200_20_0_fff;
+            invader_table[36]    <= 52'h0_020_220_20_0_fff;
+            invader_table[37]    <= 52'h0_020_240_20_0_fff;
+            invader_table[38]    <= 52'h0_020_260_20_0_fff;
+            invader_table[39]    <= 52'h0_000_000_20_0_000;
+            invader_table[40]    <= 52'h0_000_000_20_0_000;
+            invader_table[41]    <= 52'h0_000_000_20_0_000;
+            invader_table[42]    <= 52'h0_000_000_20_0_000;
+            invader_table[43]    <= 52'h0_000_000_20_0_000;
+            invader_table[44]    <= 52'h0_000_000_20_0_000;
+            invader_table[45]    <= 52'h0_000_000_20_0_000;
+            invader_table[46]    <= 52'h0_000_000_20_0_000;
+            invader_table[47]    <= 52'h0_000_000_20_0_000;
+            invader_table[48]    <= 52'h0_000_000_20_0_000;
+            invader_table[50]    <= 52'h0_000_000_20_0_000;
+            invader_table[51]    <= 52'h0_000_000_20_0_000;
+            invader_table[52]    <= 52'h0_000_000_20_0_000;
+            invader_table[53]    <= 52'h0_000_000_20_0_000;
+            invader_table[54]    <= 52'h0_000_000_20_0_000;
+            invader_table[55]    <= 52'h0_000_000_20_0_000;
+            invader_table[56]    <= 52'h0_000_000_20_0_000;
+            invader_table[57]    <= 52'h0_000_000_20_0_000;
+            invader_table[58]    <= 52'h0_000_000_20_0_000;
+            invader_table[59]    <= 52'h0_000_000_20_0_000;
+            invader_table[60]    <= 52'h0_000_000_20_0_000;
+            invader_table[61]    <= 52'h0_000_000_20_0_000;
+            invader_table[62]    <= 52'h0_000_000_20_0_000;
 
-            invader_tableTEMP[0]     <= 40'h0_000_000_000;
-            invader_tableTEMP[1]     <= 40'h0_000_000_000;
-            invader_tableTEMP[2]     <= 40'h0_000_000_000;
-            invader_tableTEMP[3]     <= 40'h0_000_000_000;
-            invader_tableTEMP[4]     <= 40'h0_000_000_000;
-            invader_tableTEMP[5]     <= 40'h0_000_000_000;
-            invader_tableTEMP[6]     <= 40'h0_000_000_000;
-            invader_tableTEMP[7]     <= 40'h0_000_000_000;
-            invader_tableTEMP[8]     <= 40'h0_000_000_000;
-            invader_tableTEMP[9]     <= 40'h0_000_000_000;
-            invader_tableTEMP[10]    <= 40'h0_000_000_000;
-            invader_tableTEMP[11]    <= 40'h0_000_000_000;
-            invader_tableTEMP[12]    <= 40'h0_000_000_000;
-            invader_tableTEMP[13]    <= 40'h0_000_000_000;
-            invader_tableTEMP[14]    <= 40'h0_000_000_000;
-            invader_tableTEMP[15]    <= 40'h0_000_000_000;
-            invader_tableTEMP[16]    <= 40'h0_000_000_000;
-            invader_tableTEMP[17]    <= 40'h0_000_000_000;
-            invader_tableTEMP[18]    <= 40'h0_000_000_000;
-            invader_tableTEMP[19]    <= 40'h0_000_000_000;
-            invader_tableTEMP[20]    <= 40'h0_000_000_000;
-            invader_tableTEMP[21]    <= 40'h0_000_000_000;
-            invader_tableTEMP[22]    <= 40'h0_000_000_000;
-            invader_tableTEMP[23]    <= 40'h0_000_000_000;
-            invader_tableTEMP[24]    <= 40'h0_000_000_000;
-            invader_tableTEMP[25]    <= 40'h0_000_000_000;
-            invader_tableTEMP[26]    <= 40'h0_000_000_000;
-            invader_tableTEMP[27]    <= 40'h0_000_000_000;
-            invader_tableTEMP[28]    <= 40'h0_000_000_000;
-            invader_tableTEMP[29]    <= 40'h0_000_000_000;
-            invader_tableTEMP[30]    <= 40'h0_000_000_000;
-            invader_tableTEMP[31]    <= 40'h0_000_000_000;
-            invader_tableTEMP[32]    <= 40'h0_000_000_000;
-            invader_tableTEMP[33]    <= 40'h0_000_000_000;
-            invader_tableTEMP[34]    <= 40'h0_000_000_000;
-            invader_tableTEMP[35]    <= 40'h0_000_000_000;
-            invader_tableTEMP[36]    <= 40'h0_000_000_000;
-            invader_tableTEMP[37]    <= 40'h0_000_000_000;
-            invader_tableTEMP[38]    <= 40'h0_000_000_000;
-            invader_tableTEMP[39]    <= 40'h0_000_000_000;
-            invader_tableTEMP[40]    <= 40'h0_000_000_000;
-            invader_tableTEMP[41]    <= 40'h0_000_000_000;
-            invader_tableTEMP[42]    <= 40'h0_000_000_000;
-            invader_tableTEMP[43]    <= 40'h0_000_000_000;
-            invader_tableTEMP[44]    <= 40'h0_000_000_000;
-            invader_tableTEMP[45]    <= 40'h0_000_000_000;
-            invader_tableTEMP[46]    <= 40'h0_000_000_000;
-            invader_tableTEMP[47]    <= 40'h0_000_000_000;
-            invader_tableTEMP[48]    <= 40'h0_000_000_000;
-            invader_tableTEMP[49]    <= 40'h0_000_000_000;
+            invader_tableTEMP[0]     <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[1]     <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[2]     <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[3]     <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[4]     <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[5]     <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[6]     <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[7]     <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[8]     <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[9]     <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[10]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[11]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[12]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[13]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[14]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[15]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[16]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[17]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[18]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[19]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[20]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[21]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[22]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[23]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[24]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[25]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[26]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[27]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[28]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[29]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[30]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[31]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[32]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[33]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[34]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[35]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[36]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[37]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[38]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[39]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[40]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[41]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[42]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[43]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[44]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[45]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[46]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[47]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[48]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[49]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[50]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[51]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[52]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[53]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[54]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[55]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[56]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[57]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[58]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[59]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[60]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[61]    <= 52'h0_000_000_20_0_000;
+            invader_tableTEMP[62]    <= 52'h0_000_000_20_0_000;
 
             //pixeladdrH <= 1'b0;
             invMS <= 7'd0;
@@ -224,6 +264,7 @@ always_ff @(posedge clk25M) begin
             movearg <= 1'b1;
             moveNext <= 1'b1;
             movelock <= 1'b0;
+            umoveC <= 0;
         end else begin
             if(clk60&(invMSEN == 0))begin
                 invMSEN <= 1'b1;
@@ -232,71 +273,89 @@ always_ff @(posedge clk25M) begin
                 table_upS <= 2'b00;
             end else if(invMSEN)begin
                 if(table_upS == 2'b00)begin
-                    if(((invader_table[invMS]&40'h8_000_000_000) == 40'h8_000_000_000)&swf0) begin
-                        case(movearg)
-                            2'd0:begin
-                                if((invader_table[invMS]&40'h0_fff_000_000)>= 40'h0_010_000_000)begin
-                                invader_tableTEMP[invMS] <= ((invader_table[invMS]&40'hf_000_fff_fff) + {(invader_table[invMS]&40'h0_fff_000_000) - {12'h0, speed, 24'h000000}});
-                            end else begin
-                                invader_tableTEMP[invMS] <= invader_table[invMS];
-                                moveNext <= 1;
-                                movelock <= 1;
+                    if(((invader_table[invMS]&52'h8_000_000_00_0_000) == 52'h8_000_000_00_0_000)&swf0) begin
+                        if(invMS<62)begin
+                            case(movearg)
+                                2'd0:begin
+                                    if((invader_table[invMS]&52'h0_fff_000_00_0_000)>= 52'h0_010_000_00_0_000)begin
+                                    invader_tableTEMP[invMS] <= ((invader_table[invMS]&52'hf_000_fff_ff_f_fff) + {(invader_table[invMS]&52'h0_fff_000_00_0_000) - {12'h0, speed, 36'h000000}});
+                                end else begin
+                                    invader_tableTEMP[invMS] <= invader_table[invMS];
+                                    moveNext <= 1;
+                                    movelock <= 1;
+                                end
                             end
-                        end
-                        2'd1:begin
-                            if((invader_table[invMS]&40'h0_000_fff_000)< 40'h0_000_250_000)begin
-                                invader_tableTEMP[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff) + {(invader_table[invMS]&40'h0_000_fff_000) + {24'h0, speed, 12'h000}});
-                            end else begin
-                                invader_tableTEMP[invMS] <= invader_table[invMS];
-                                moveNext <= 2;
-                                movelock <= 1;
+                            2'd1:begin
+                                if((invader_table[invMS]&52'h0_000_fff_00_0_000)< 52'h0_000_280_00_0_000 - {16'h0_000, rrom_size[invMS], 24'h00_0_000})begin
+                                    invader_tableTEMP[invMS] <= ((invader_table[invMS]&52'hf_fff_000_ff_f_fff) + {(invader_table[invMS]&52'h0_000_fff_00_0_000) + {24'h0, speed, 24'h000}});
+                                end else begin
+                                    invader_tableTEMP[invMS] <= invader_table[invMS];
+                                    moveNext <= 2;
+                                    movelock <= 1;
+                                end
                             end
-                        end
-                        2'd2:begin
-                            if((invader_table[invMS]&40'h0_fff_000_000)< 40'h0_1c0_000_000)begin
-                                invader_tableTEMP[invMS] <= ((invader_table[invMS]&40'hf_000_fff_fff) + {(invader_table[invMS]&40'h0_fff_000_000) + 40'h0_001_000_000});
-                                umoveC <= umoveC + 1;
-                                moveNext <= (umoveC == 31) ?3:2;
-                            end else begin
-                                invader_tableTEMP[invMS] <= invader_table[invMS];
-                                moveNext <=3;
-                                movelock <= 1;
+                            2'd2:begin
+                                if(((invader_table[invMS]&52'h0_fff_000_00_0_000)< 52'h0_1c0_000_00_0_000))begin
+                                    invader_tableTEMP[invMS] <= ((invader_table[invMS]&52'hf_000_fff_ff_f_fff) + {(invader_table[invMS]&52'h0_fff_000_00_0_000) + 52'h0_001_000_00_0_000});
+                                    //umoveC <= umoveC + 1;
+                                    moveNext <= (umoveC == 31) ?3:2;
+                                    //moveNext <= 3;
+                                end else begin
+                                    invader_tableTEMP[invMS] <= invader_table[invMS];
+                                    moveNext <=3;
+                                    movelock <= 1;
+                                end
                             end
-                        end
-                        2'd3:begin
-                            if((invader_table[invMS]&40'h0_000_fff_000)>= 40'h0_000_010_000)begin
-                                invader_tableTEMP[invMS] <= ((invader_table[invMS]&40'hf_fff_000_fff) + {(invader_table[invMS]&40'h0_000_fff_000) - {24'h0, speed, 12'h000}});
-                            end else begin
-                                invader_tableTEMP[invMS] <= invader_table[invMS];
-                                moveNext <= 1;
-                                movelock <= 1;
+                            2'd3:begin
+                                if((invader_table[invMS]&52'h0_000_fff_00_0_000)>= 52'h0_000_010_00_0_000)begin
+                                    invader_tableTEMP[invMS] <= ((invader_table[invMS]&52'hf_fff_000_ff_f_fff) + {(invader_table[invMS]&52'h0_000_fff_00_0_000) - {24'h0, speed, 24'h000}});
+                                end else begin
+                                    invader_tableTEMP[invMS] <= invader_table[invMS];
+                                    moveNext <= 1;
+                                    movelock <= 1;
+                                end
                             end
+                            endcase
                         end
-                        endcase
                     end begin
                         invT_pV[invMS] <= 8'h00;
                         invT_pH[invMS] <= 8'h00; 
-                        invMS <= (invMS == 49) ? 0 : invMS + 1;
+                        invMS <= (invMS == 62) ? 0 : invMS + 1;
                         //invMSEN <= (invMS == 100) ? 0 : 1;
-                        table_upS <= (invMS == 49) ? 2'b01 : 2'b00;
+                        table_upS <= (invMS == 62) ? 2'b01 : 2'b00;
                     end
                 end else if(table_upS == 2'b01)begin
                         invader_table[invMS] <= (movelock) ? invader_table[invMS] : invader_tableTEMP[invMS];
-                        invMS <= (invMS == 49) ? 0 : invMS + 1;
-                        invMSEN <= (invMS == 49) ? 0 : 1;
-                        table_upS <= (invMS == 49) ? 2'b00 : 2'b01;
+                        invMS <= (invMS == 62) ? 0 : invMS + 1;
+                        invMSEN <= (invMS == 62) ? 0 : 1;
+                        table_upS <= (invMS == 62) ? 2'b00 : 2'b01;
+                        umoveC <= (umoveC == 31) ? ((invMS == 62)? 0 : umoveC) : ((invMS == 62)? umoveC + 1 : umoveC);
                 end    
             end else begin
-                if(rrom_rens != 50)begin
+                if(rrom_rens != 63)begin
                     if(rrom_ren[rrom_rens] & write_ENA)begin
-                        invT_pH[rrom_rens] <= (whpos==rrom_hpos[rrom_rens]) ? 0 : (whpos==rrom_hpos[rrom_rens]+31) ? 0 : invT_pH[rrom_rens] + 1;
-                        invT_pV[rrom_rens] <= (whpos==rrom_hpos[rrom_rens]+31) ? invT_pV[rrom_rens] + 1 : invT_pV[rrom_rens];
+                        invT_pH[rrom_rens] <= (whpos==rrom_hpos[rrom_rens]) ? 0 : (whpos==rrom_hpos[rrom_rens]+rrom_size[rrom_rens]-1) ? 0 : invT_pH[rrom_rens] + 1;
+                        invT_pV[rrom_rens] <= (whpos==rrom_hpos[rrom_rens]+rrom_size[rrom_rens]-1) ? invT_pV[rrom_rens] + 1 : invT_pV[rrom_rens];
                     end begin
                         colorpallet <= invader_table[rrom_rens];
                     end
                 end
             end
-        end vdin <= (rrom_rens != 50) ? inv01A[invT_pVs][invT_pHs] * colorpallet : 12'h000;  
+        end 
+        if(rrom_rens != 63)begin
+            case(rrom_ID[rrom_rens])
+                3'd0 : vdin <= inv00A[invT_pVs][invT_pHs] * colorpallet;
+                3'd1 : vdin <= inv01A[invT_pVs][invT_pHs] * colorpallet;
+                3'd2 : vdin <= inv02A[invT_pVs][invT_pHs] * colorpallet;
+                3'd3 : vdin <= inv03A[invT_pVs][invT_pHs] * colorpallet;
+                3'd4 : vdin <= inv04A[invT_pVs][invT_pHs] * colorpallet;
+                3'd5 : vdin <= inv05A[invT_pVs][invT_pHs] * colorpallet;
+                3'd6 : vdin <= inv00B[invT_p12];
+                3'd7 : vdin <= inv01B[invT_p12];
+            endcase
+        end else begin
+            vdin <= 12'h000;
+        end    
 end
 
 typedef enum logic [1:0] {
@@ -307,17 +366,18 @@ rrom_stateT rrom_state;
 
 genvar k;
 generate 
-    for(k=0;k<50;k=k+1) begin : RromReadEN
-        assign rrom_EN[k]   = (invader_table[k]&40'hf_000_000_000)>>39;
-        assign rrom_vpos[k] = (invader_table[k]&40'h0_fff_000_000)>>24;
-        assign rrom_hpos[k] = (invader_table[k]&40'h0_000_fff_000)>>12;
-        assign rrom_whpos[k] = (rrom_EN[k]==1'b1) & (rrom_hpos[k]<=whpos) & (whpos < rrom_hpos[k]+32);
-        assign rrom_wvpos[k] = (rrom_EN[k]==1'b1) & (rrom_vpos[k]<=wvpos) & (wvpos < rrom_vpos[k]+32);
-        assign rrom_ren[k] = (rrom_EN[k]==1'b1) & (rrom_hpos[k]<=whpos) & (whpos < rrom_hpos[k]+32) & (rrom_vpos[k]<=wvpos) & (wvpos < rrom_vpos[k]+32);                                                     
+    for(k=0;k<63;k=k+1) begin : RromReadEN
+        assign rrom_EN[k]   = (invader_table[k]&52'hf_000_000_00_0_000)>>51;
+        assign rrom_vpos[k] = (invader_table[k]&52'h0_fff_000_00_0_000)>>36;
+        assign rrom_hpos[k] = (invader_table[k]&52'h0_000_fff_00_0_000)>>24;
+        assign rrom_size[k] = (invader_table[k]&52'h0_000_000_ff_0_000)>>16;
+        assign rrom_ID[k]   = (invader_table[k]&52'h0_000_000_00_f_000)>>12;
+        //assign rrom_ID[k]    =(invader_table[k]&52'hf_000_000_00_0_000)>>48;
+        assign rrom_whpos[k] = (rrom_EN[k]==1'b1) & (rrom_hpos[k]<=whpos) & (whpos < rrom_hpos[k]+rrom_size[k]);
+        assign rrom_wvpos[k] = (rrom_EN[k]==1'b1) & (rrom_vpos[k]<=wvpos) & (wvpos < rrom_vpos[k]+rrom_size[k]);
+        assign rrom_ren[k] = (rrom_EN[k]==1'b1) & (rrom_hpos[k]<=whpos) & (whpos < rrom_hpos[k]+rrom_size[k]) & (rrom_vpos[k]<=wvpos) & (wvpos < rrom_vpos[k]+rrom_size[k]);                                                     
     end
 endgenerate
-
-
 
 assign  rrom_rens = rrom_ren[0] ? 6'd0 :
                     rrom_ren[1] ? 6'd1:
@@ -369,67 +429,24 @@ assign  rrom_rens = rrom_ren[0] ? 6'd0 :
                     rrom_ren[47] ? 6'd47:
                     rrom_ren[48] ? 6'd48:
                     rrom_ren[49] ? 6'd49:
-                    6'd50;
+                    rrom_ren[50] ? 6'd50:
+                    rrom_ren[51] ? 6'd51:
+                    rrom_ren[52] ? 6'd52:
+                    rrom_ren[53] ? 6'd53:
+                    rrom_ren[54] ? 6'd54:
+                    rrom_ren[55] ? 6'd55:
+                    rrom_ren[56] ? 6'd56:
+                    rrom_ren[57] ? 6'd57:
+                    rrom_ren[58] ? 6'd58:
+                    rrom_ren[59] ? 6'd59:
+                    rrom_ren[60] ? 6'd60:
+                    rrom_ren[61] ? 6'd61:
+                    rrom_ren[62] ? 6'd62:                    
+                    6'd63;
 
 always_ff @(posedge clk25M)begin
     write_vramB <= write_vramA;
     write_ENB <= write_ENA;
 end
 
-/*
-always_ff @(posedge clk60) begin
-    if(reset) begin
-        game_state <= game_start;
-        invader_state <= inv_stop;
-    end else if(schange) begin
-        case(game_state)
-            game_state : begin
-                if(swW) begin
-                    game_state <= game_play;
-                    invader_state <= left;
-                end
-            end
-            game_play : begin
-                // cannon turn
-                if(swL & (vtable[19:12][840] == laser_cannon_L))// cannon NOT moves left
-                else if(swL & (vtable[19:12][840] != laser_cannon_L))// cannon moves left
-                if(swR & (vtable[19:12][899] == laser_cannon_R))// cannon NOT moves right
-                else if(swR & (vtable[19:12][899] == laser_cannon_R))// cannon moves right
-                if(swW) // cannon launch laser
-                
-                // invader (laser)
-                
-                //  invader (move)                
-                case(invader_state)
-                    inv_left: begin
-                        if(leftedges)begin
-                            invader_state <= inv_right;
-                        end else begin
-                         // invader moves left
-                        end
-                    end
-                    inv_right : begin
-                        if(rightedges & rightedge[14]==1'b0)begin
-                    
-                        //invader moves under
-                        end else if(rightedges & rightedge[14]==1'b1)// gameover
-                    end
-                    inv_under : begin
-                        //moves under and status left
-                        invader_state <= inv_left;
-                    end
-                    default: begin
-                        game_state <= game_over;
-                        invader_state <= inv_stop;
-                    end
-            end
-            game_result : begin
-            end
-            game_over : begin
-            end
-            game_romu : begin
-            end
-    end
-end
-*/
 endmodule

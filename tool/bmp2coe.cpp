@@ -11,7 +11,7 @@
 #include <vector>
 #include <bitset> 
 using namespace std;
-string VER = "0.0.1";
+string VER = "0.0.2";
 bool debug = false;
 int outfile;
 string fiex;
@@ -20,13 +20,21 @@ string fiex;
 unsigned int databyte;
 void mam(){
     cout << "Man for bmp2coe: " << endl;
-    cout << "Usage: $ bmp2coe -[v/q/r] [file.bmp] -[12/24]" << endl;
+    cout << "Usage: $ bmp2coe -[v/q/r] [file.bmp] [Bit per Color]" << endl;
     cout << "Convert BMP to Memory init File" << endl;
-    cout << "1/4/8 bit Bitmap ... Convert Simplify" << endl;
+    cout << "Bitmap File support: 1 and 24bit" << endl;
+    cout << endl;
+    cout << "Function::" << endl;;
+    cout << "1 bit Bitmap ... Convert A two-dimensional array(X-Y)" << endl;
+    cout << "24bit Bitmap ... Convert A two-dimensional array(Color-Address)" << endl;
+    cout << endl;
+    cout << "Options::" << endl;
     cout << "\t-v\toutput file for vivado   (.coe)" << endl;
     cout << "\t-q\toutput file for quartus  (.mif)" << endl;
-    cout << "\t-r\toutput file for readmem (.txt)" << endl;
-    cout << "bmp2coe (Ver:" << VER << ", 2020)" << endl;
+    cout << "\t-r\toutput file for readmem  (.txt)" << endl;
+    cout << "\tBit per Color [1-8], Default: 4 bit(4096 Colors)" << endl;
+    cout << endl;
+    cout << "bmp2coe (Ver:" << VER << ", 2020, rootY)" << endl;
 }
 
 uint64_t headrec(string fstreamin, unsigned int startbyte, unsigned int endbyte){
@@ -88,95 +96,19 @@ void bitbcut(string fstream, vector<vector<uint8_t>> &pallet ,unsigned int start
     oout.close();
 }
 
-void bitqcut(string fstream, vector<vector<uint8_t>> &pallet ,unsigned int startbyte, unsigned int bpl, unsigned int offset, string Nfilename, unsigned int index){ 
-    unsigned charbit = bpl + offset;
-    unsigned charbyte = charbit/8;
-    uint8_t linebyte[charbyte] = {0};
-    ofstream oout(Nfilename+fiex, ios::app);
-    for(int i=0;i<charbyte;i++)linebyte[i] = static_cast<uint8_t>(fstream[i+startbyte]);
-    if(debug)cout << setw(3) << setfill('0') << hex << startbyte << " : " << setfill(' ') << setw(0);//<< hex << +linebyte << endl;
-    int i=0;
-    uint8_t ac0, ac1;
-    uint8_t rc0[3], rc1[3];
-    /*
-    if(debug){
-        for(int a=0;a<charbyte;a++){
-            cout << setw(2) << setfill('0') << hex << +static_cast<uint8_t>(linebyte[a]) << ", ";
-        }
-        cout << setfill(' ') << setw(0) << "\n\t";
-    }
-    */
-    for(i=0;i<bpl/8;i++){
-        ac0=(linebyte[i]& 0b11110000)>>4;
-        ac1=(linebyte[i]& 0b00001111);
-        for(int j=0;j<3;j++){
-            rc0[j] = pallet[j][ac0];
-            rc1[j] = pallet[j][ac1];    
-        }
-        if(debug)cout << +ac0 << +ac1;
-        if(outfile==1)oout << setw(4) << setfill('0') << dec << index*(bpl/4)+i*2 << " : ";
-        for(int j=0;j<3;j++)oout  << hex << setw(2) << setfill('0') << +rc0[j];
-        if(outfile==1)oout << ";";
-        oout << endl;
-        if(outfile==1)oout  << setw(4) << setfill('0') << dec << index*(bpl/4)+i*2+1 << " : ";
-        for(int j=0;j<3;j++)oout << hex << setw(2) << setfill('0') << +rc1[j];
-        if(outfile==1)oout << ";";
-        oout << endl;
-    }
-    if(bpl%8==4){
-        ac0=(linebyte[i]&0b11110000)>>4;
-        cout << +ac0 << endl;
-        for(int j=0;j<3;j++){
-            rc0[j] = pallet[j][ac0];   
-        }
-        if(outfile==1)oout << setw(4) << setfill('0') << dec << index*(bpl/4)+i*2 << " : ";
-        oout <<  setw(2) << setfill('0') << hex << +rc0[0] << +rc0[1] << +rc0[2] << setw(0) << setfill('0');
-        if(outfile==1)oout << ";";
-        oout << endl;
-    }
-    //cout << setfill(' ') << setw(0) << dec << l << endl;
-    //cout << endl;
-
-    if(outfile==0 && startbyte==databyte)oout << ";" << endl;
-    else if(outfile == 1 && startbyte==databyte) oout << "END;" << endl;
-    oout.close();
-}
-
-void bitocut(string fstream, vector<vector<uint8_t>> &pallet ,unsigned int startbyte, unsigned int bpl, unsigned int offset, string Nfilename, unsigned int index){ 
-    unsigned charbit = bpl + offset;
-    unsigned charbyte = charbit/8;
-    //cout << hex << charbit << ", " << charbyte << endl;
-    char linebyte[charbyte] = {0};
-    ofstream oout(Nfilename+fiex, ios::app);
-    //string outl;
-    fstream.copy(linebyte, charbyte, startbyte);
-    if(debug)cout << setw(3) << setfill('0') << hex << startbyte << " : " << setfill(' ') << setw(0);//<< hex << +linebyte << endl;
-    int i=0;
-    uint8_t ac0;
-    uint8_t rc0[3];
-    for(i=0;i<bpl/8;i++){
-        ac0=static_cast<uint8_t>(linebyte[i]);
-        for(int j=0;j<3;j++)rc0[j] = pallet[j][ac0];
-        if(debug)cout << setw(2) << setfill('0') << hex << +ac0;
-        if(outfile==1)oout << setw(4) << setfill('0') << dec << index*(bpl/8)+i << " : ";
-        for(int j=0;j<3;j++)oout << setw(2) << setfill('0') << hex << +rc0[j];
-        if(outfile==1)oout << ";";
-        if(i!=bpl-1) oout << endl;
-    }
-    if(debug) cout << endl;
-    if(outfile==0 && startbyte==databyte)oout << ";" << endl;
-    else if(outfile == 1 && startbyte==databyte) oout << "END;" << endl;
-    oout.close();
-}
-
-void bit24cut(string fstream, unsigned long startbyte, unsigned int bpl, string Nfilename, unsigned int index){
+void bit24cut(string fstream, unsigned long startbyte, unsigned int bpl, string Nfilename, unsigned int index, unsigned bpc){
     unsigned int Bpl = bpl/8;
     uint8_t linebyte[Bpl] = {0};
     for(int i=0;i<Bpl;i++)linebyte[i] = static_cast<uint8_t>(fstream[i+startbyte]);
     ofstream oout(Nfilename+fiex, ios::app);
     for(int i=0;i<Bpl/3;i++){
-        if(outfile==1) oout << index*(Bpl/3)+i << " : ";
-        for(int j=0;j<3;j++)oout << setw(2) << setfill('0') << hex << +linebyte[3*i+j];
+        if(outfile==1) oout << index*(Bpl/3)+i << " : "; 
+        for(int j=0;j<3;j++){
+            uint8_t tempa = linebyte[3*i+j]*(pow(2,bpc)-1)/255;
+            //uint8_t tempa = linebyte[3*i+j]*15/255;
+            //oout << setw(2) << setfill('0') << hex << +linebyte[3*i+j];
+            oout << setw(1) << setfill('0') << hex << +tempa;
+        }
         if(outfile==1) oout << ";";
         oout << endl;
     }
@@ -185,8 +117,7 @@ void bit24cut(string fstream, unsigned long startbyte, unsigned int bpl, string 
 
 int main(int argc, char *argv[]){
     bool exf = false;
-    
-    cout << argv[1] << endl;
+    unsigned bpc = 4;
     if(argc<3 || 4<argc){
         mam();
         return 0;
@@ -208,6 +139,9 @@ int main(int argc, char *argv[]){
     }
 
     ifstream ifs(argv[2]);
+    if(argv[3]!=0) bpc = atoi(argv[3]);
+    for(int i=0;i<argc;i++)cout << argv[i] << ", ";
+    cout << "\nBit/Color : " << bpc << endl ;
     if(ifs.fail()){
         cout << "failed open file" << endl;
         return -1;
@@ -249,13 +183,7 @@ int main(int argc, char *argv[]){
     int mode =0;
     switch(bcBitCount){
         case(1): 
-            mode = 0;
-            break; 
-        case(4):
-            mode = 4;
-            break; 
-        case(8):    
-            mode = 8;
+            mode = 1;
             break; 
         case(24):
             mode = 24;
@@ -266,7 +194,7 @@ int main(int argc, char *argv[]){
     }
     
     vector<vector<uint8_t>> pallet(4, vector<uint8_t>(pow(2,bcBitCount), 0)); 
-    if(mode <= 8){
+    if(mode == 1){
         for (int i=0;i<pow(2,bcBitCount);i++){
             cout << hex << palpo+(i*4) << " : ";
             for(int j=0;j<4;j++){
@@ -305,9 +233,7 @@ int main(int argc, char *argv[]){
             for(unsigned int i=0;i<bcheight;i++){
             unsigned long bytepos = filesize - /*headrec(str,0x0a, 0x0d) + */(bcBitCount*bcwidth+offset)*(i+1)/8;
             if(bcBitCount==1)bitbcut(str, pallet, bytepos, (bcBitCount*bcwidth), offset, Nfilename, i);
-            else if(bcBitCount==4) bitqcut(str, pallet, bytepos, (bcBitCount*bcwidth), offset, Nfilename, i);
-            else if(bcBitCount==8) bitocut(str, pallet, bytepos, (bcBitCount*bcwidth), offset, Nfilename, i);
-            else if(bcBitCount==24) bit24cut(str, bytepos, (bcBitCount*bcwidth), Nfilename, i);
+            else if(bcBitCount==24) bit24cut(str, bytepos, (bcBitCount*bcwidth), Nfilename, i, bpc);
         }
 }
 // setw(keta) << setfill("0") << 

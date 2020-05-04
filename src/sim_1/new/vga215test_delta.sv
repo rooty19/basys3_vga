@@ -45,6 +45,6 @@ module vga215test;
     basys3_vga #(
     .intable("intable.txt"),
     .latable("latable.txt"),
-    .invader01("invader01.txt")
+    .invader01("invader00.txt")
     )basys3_vga(.*);
 endmodule

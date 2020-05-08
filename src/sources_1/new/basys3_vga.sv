@@ -3,7 +3,7 @@
 module basys3_vga #(
     parameter intable = "intable.txt",
     parameter latable = "latable.txt",
-    parameter invader00 = "picture/invader00.txt"
+    parameter invader00 = "picture/unarist.txt"
 )(
     input   logic            clk,
     input   logic   [15:0]   sw,
@@ -67,6 +67,7 @@ gamefsm #(
     clk, !sw[1], clk25M, clk60,
     sw[5], sw[4], sw[3],
     sw[15:12],
+    btnC, btnU, btnL, btnR, btnD,
     whpos, wvpos,
     write_vramA, write_ENA,
     write_vramB, write_ENB,

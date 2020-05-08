@@ -1,3 +1,4 @@
+`include "BRAM_test.sv"
 module gamefsm #(
     parameter rad = 8,
     parameter intable = "intable.txt",
@@ -11,9 +12,9 @@ module gamefsm #(
     input   logic   [9:0]   whpos, wvpos,
     input   logic   [18:0]  write_vramA,
     input   logic           write_ENA,
-    output  logic   [18:0]  write_vramB,
-    output  logic           write_ENB,
-    output  logic   [11:0]  vdin
+    output  logic   [18:0]  write_vramC,
+    output  logic           write_ENC,
+    output  logic   [11:0]  dinB
 );
 
 /*
@@ -29,32 +30,6 @@ logic   [51:0]    invader_table [0:62];
 logic   [51:0]    invader_tableTEMP [0:62];
 logic   [7:0]     invT_pV       [0:62];
 logic   [7:0]     invT_pH       [0:62];
-
-logic   [31:0]    inv00A        [0:31];
-logic   [31:0]    inv01A        [0:31];
-logic   [31:0]    inv02A        [0:31];
-logic   [31:0]    inv03A        [0:31];
-logic   [31:0]    inv04A        [0:31];
-logic   [31:0]    inv05A        [0:31];
-logic   [11:0]    inv00B        [0:16383];
-logic   [11:0]    inv01B        [0:16383];
-
-
-
-initial begin
-    //$readmemh(intable, invader_table);
-    //$readmemh(latable, laser_table);
-    $readmemh("invTs.txt", invT_pV);
-    $readmemh("invTs.txt", invT_pH);
-    $readmemb(invader00, inv00A);
-    $readmemb("picture/space.txt", inv01A);
-    $readmemb("picture/space.txt", inv02A);
-    $readmemb("picture/space.txt", inv03A);
-    $readmemb("picture/space.txt", inv04A);
-    $readmemb("picture/space.txt", inv05A);
-    $readmemh("picture/pikepike.txt", inv00B);
-    $readmemh("picture/karubabu.txt", inv01B);
-end
 
 logic   [6:0]   invMS;
 logic           invMSEN;
@@ -96,14 +71,41 @@ logic   [1:0]   table_upS;
 logic   [11:0]  lase_chpos; // canon
 logic   [11:0]  lase_cepos; // enemy
 
+logic   [11:0]  dinA0, dinA1, dinA2, dinA3, dinA4, dinA5, dinA6, dinA7, dinA8;
+logic   [7:0]   csA;
+logic   [18:0]  write_vramB;
+logic           write_ENB;
+
 assign invT_pVs = invT_pV[rrom_rens];
 assign invT_pHs = invT_pH[rrom_rens];
 assign invT_p12 = invT_pV[rrom_rens] * rrom_size[rrom_rens] + invT_pH[rrom_rens];
 
 assign lase_chpos = rrom_hpos[62]+17;
-genvar i;
 
-//f_000_000_fff
+BRAM_test #(.Dword(1024),  .Dwidth(12), .initfile("picture/space12.txt")) BRAM_00 (
+    clk25M, 1'b0, invT_p12, 12'h000, dinA0
+);
+BRAM_test #(.Dword(1024),  .Dwidth(12), .initfile("picture/space12.txt")) BRAM_01 (
+    clk25M, 1'b0, invT_p12, 12'h000, dinA1
+);
+BRAM_test #(.Dword(1024),  .Dwidth(12), .initfile("picture/space12.txt")) BRAM_02 (
+    clk25M, 1'b0, invT_p12, 12'h000, dinA2
+);
+BRAM_test #(.Dword(1024),  .Dwidth(12), .initfile("picture/space12.txt")) BRAM_03 (
+    clk25M, 1'b0, invT_p12, 12'h000, dinA3
+);
+BRAM_test #(.Dword(1024),  .Dwidth(12), .initfile("picture/space12.txt")) BRAM_04 (
+    clk25M, 1'b0, invT_p12, 12'h000, dinA4
+);
+BRAM_test #(.Dword(1024),  .Dwidth(12), .initfile("picture/space12.txt")) BRAM_05 (
+    clk25M, 1'b0, invT_p12, 12'h000, dinA5
+);
+BRAM_test #(.Dword(16384), .Dwidth(12), .initfile("picture/karubabu.txt")) BRAM_06 (
+    clk25M, 1'b0, invT_p12, 12'h000, dinA6
+);
+BRAM_test #(.Dword(16384), .Dwidth(12), .initfile("picture/pikepike.txt")) BRAM_07 (
+    clk25M, 1'b0, invT_p12, 12'h000, dinA7
+);
 
 always_ff @(posedge clk25M) begin
         if(reset)begin
@@ -283,6 +285,7 @@ always_ff @(posedge clk25M) begin
             moveNext <= 1'b1;
             movelock <= 1'b0;
             umoveC <= 0;
+            dinA8 <= 12'h000;
         end else begin
             if(clk60&(invMSEN == 0))begin
                 invMSEN <= 1'b1;
@@ -382,27 +385,38 @@ always_ff @(posedge clk25M) begin
         end 
         if(rrom_rens < 63)begin
             case(rrom_ID[rrom_rens])
-                3'd0 : vdin <= inv00A[invT_pVs][invT_pHs] * colorpallet;
-                3'd1 : vdin <= inv01A[invT_pVs][invT_pHs] * colorpallet;
-                3'd2 : vdin <= inv02A[invT_pVs][invT_pHs] * colorpallet;
-                3'd3 : vdin <= inv03A[invT_pVs][invT_pHs] * colorpallet;
-                3'd4 : vdin <= inv04A[invT_pVs][invT_pHs] * colorpallet;
-                3'd5 : vdin <= inv05A[invT_pVs][invT_pHs] * colorpallet;
-                3'd6 : vdin <= inv00B[invT_p12];
-                3'd7 : vdin <= inv01B[invT_p12];
+                3'd0 : csA <= 1;
+                3'd1 : csA <= 1<<1;
+                3'd2 : csA <= 1<<2;
+                3'd3 : csA <= 1<<3;
+                3'd4 : csA <= 1<<4;
+                3'd5 : csA <= 1<<5;
+                3'd6 : csA <= 1<<6;
+                3'd7 : csA <= 1<<7;
             endcase
+            dinA8 <= 12'h000;
         end else if(lase_rens < 40)begin
-            vdin <= lase_color[lase_rens];
+            csA <= 0;
+            dinA8 <= lase_color[lase_rens];
         end else begin
-            vdin <= 12'h000;
+            csA <= 0;
+            dinA8 <= 12'h000;
         end    
 end
 
-typedef enum logic [1:0] {
-    blankS, romS
-} rrom_stateT;
-rrom_stateT rrom_state;
-
+always_ff @(posedge clk25M)begin
+    case(csA)
+        8'b00000001 : dinB <= dinA0;
+        8'b00000010 : dinB <= dinA1;
+        8'b00000100 : dinB <= dinA2;
+        8'b00001000 : dinB <= dinA3;
+        8'b00010000 : dinB <= dinA4;
+        8'b00100000 : dinB <= dinA5;
+        8'b01000000 : dinB <= dinA6;
+        8'b10000000 : dinB <= dinA7;
+        default : dinB <= dinA8;
+    endcase    
+end
 
 genvar k,l;
 generate 
@@ -537,7 +551,9 @@ assign  rrom_rens = rrom_ren[0] ? 6'd0 :
 
 always_ff @(posedge clk25M)begin
     write_vramB <= write_vramA;
+    write_vramC <= write_vramB;
     write_ENB <= write_ENA;
+    write_ENC <= write_ENB;
 end
 
 endmodule

@@ -3,6 +3,7 @@ basys3_vga/*
 *.log
 src/sources_1/ip/blk_mem_gen_0
 !src/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci
+src/sources_1/ip/bram128
 src/sources_1/new/picture
 .vscode/settings.json
 *.bmp

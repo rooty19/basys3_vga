@@ -12,10 +12,8 @@ module BRAM_test #(
     (* RAM_STYLE="BLOCK"*) logic   [Dwidth-1:0]    bram    [0:Dword-1];
     initial $readmemh(initfile, bram);
     always_ff @(posedge clk)begin
-        //if(en)begin
-            if(we) bram[addr] <= din;
-            dout <= bram[addr];
-        //end
+        if(we) bram[addr] <= din;
+        dout <= bram[addr];
     end
 
 endmodule

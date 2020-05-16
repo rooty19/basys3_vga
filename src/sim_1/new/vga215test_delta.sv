@@ -19,7 +19,6 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-
 module vga215test;
     logic            clk;
     logic   [15:0]   sw;
@@ -32,9 +31,9 @@ module vga215test;
     logic            Hsync, Vsync;
 
     initial begin
-        sw[1:0] <= 2'b00;
+        sw[15:0] <= 2'b00;
         clk <= 1'b0;
-        {btnC, btnU, btnL, btnR, btnD} <= 5'b0;
+        {btnC, btnU, btnL, btnR, btnD} <= 5'b10000;
         #10
         sw[1:0] <= 2'b01;
         #50
@@ -43,8 +42,6 @@ module vga215test;
     end
     always #5 clk <= ~clk;
     basys3_vga #(
-    .intable("intable.txt"),
-    .latable("latable.txt"),
-    .invader01("invader00.txt")
+    .ramdamize("ramdamize.sv")
     )basys3_vga(.*);
 endmodule

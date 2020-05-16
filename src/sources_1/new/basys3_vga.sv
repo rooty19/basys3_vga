@@ -1,10 +1,7 @@
 `include "vhclk_gen.v"
+`include "ramdamize.sv"
 //`include "gamefsm.sv"
-module basys3_vga #(
-    parameter intable = "intable.txt",
-    parameter latable = "latable.txt",
-    parameter invader00 = "picture/unarist.txt"
-)(
+module basys3_vga(
     input   logic            clk,
     input   logic   [15:0]   sw,
     output  logic   [6:0]    seg,
@@ -25,12 +22,12 @@ divider #(.targetfreq(32'd16))  div10 (clk, !sw[0], clk10);
 divider #(.targetfreq(32'd500))  div100 (clk, !sw[0], clk100);
 divider #(.targetfreq(32'd25175000))  div25M (clk, !sw[0], clk25M);
 
-dynamic_led dynamic_led (clk100, !sw[1], count[15:12], count[11:8], count[7:4], count[3:0], an, {seg, dp});
-hvsync_generator hvsync_generator (clk25M, sw[1], Hsyncd, Vsyncd, display_end, hpos, vpos, vramCS);
 
+logic   [7:0]   ps_numT, ps_numU;
 logic   [19:0]  vaddr;
 logic   [18:0]  read_grobalA, read_vramA, write_vramA, write_grobalA;
 logic   [18:0]  write_vramB;
+
 always_ff @(posedge clk25M) {Hsync, Vsync} <= {Hsyncd, Vsyncd};
 always_ff @(posedge clk25M) display_en <= display_end;
 
@@ -59,19 +56,36 @@ assign clk60 = ((vpos == 480) & (hpos == 0)) ? 1 : 0;
 always_ff @(posedge clk25M) WvramCS <= RvramCS;
 assign {vgaBlue, vgaGreen, vgaRed} = (display_en) ? vdout : 12'h000;
 
-gamefsm #(
-    .intable(intable),
-    .latable(latable),
-    .invader00(invader00)
-)gamefsm(
+m_seq_test m_seq_test (
+    clk10, !sw[0], ps_numT, ps_numU
+);
+
+//dynamic_led dynamic_led (clk100, !sw[1], count[15:12], count[11:8], count[7:4], count[3:0], an, {seg, dp});
+dynamic_led dynamic_led (
+    clk100,
+    !sw[1],
+    ps_numT[7:4],
+    ps_numT[3:0],
+    ps_numU[7:4],
+    ps_numU[3:0],
+    an,
+    {seg, dp}
+);
+
+hvsync_generator hvsync_generator (clk25M, sw[1], Hsyncd, Vsyncd, display_end, hpos, vpos, vramCS);
+
+gamefsm gamefsm(
     clk, !sw[1], clk25M, clk60,
     sw[5], sw[4], sw[3],
     sw[15:12],
+    sw[11],
+    sw[10:5],
     btnC, btnU, btnL, btnR, btnD,
     whpos, wvpos,
     write_vramA, write_ENA,
     write_vramB, write_ENB,
-    vdin
+    vdin,
+    ps_numT, ps_numU
 );
 
 // address converter
@@ -113,10 +127,10 @@ blk_mem_gen_0 vramB (
 */
 );
 
+
 //assign JA[1:0] = {clk10, clk100};
 //assign JA[2] = (count[3:0]==0)? 1'b1 : 1'b0;
-logic [15:0] count; 
-
+logic   [15:0]  count;
 always_ff @(posedge clk10)begin
     if(!sw[1]) begin
         count <= 32'b0;
@@ -124,6 +138,7 @@ always_ff @(posedge clk10)begin
         count <= count + 1;
     end
 end
+
 endmodule
 
 module dynamic_led(

@@ -1,10 +1,10 @@
-invader_table[0]     <= 52'h8_010_010_80_e_ff0;
-invader_table[1]     <= 52'h8_090_090_80_f_ff0;
-invader_table[2]     <= 52'h8_110_110_20_a_ff0;
-invader_table[3]     <= 52'h8_110_130_20_8_ff0;
-invader_table[4]     <= 52'h8_110_150_20_2_ff0;
-invader_table[5]     <= 52'h8_110_170_20_1_ff0;
-invader_table[6]     <= 52'h0_000_0e0_20_0_ff0;
+invader_table[0]     <= 52'h8_070_10a_80_e_ff0;
+invader_table[1]     <= 52'h0_090_090_80_f_ff0;
+invader_table[2]     <= 52'h0_110_110_20_a_ff0;
+invader_table[3]     <= 52'h0_110_130_20_8_ff0;
+invader_table[4]     <= 52'h0_110_150_20_2_ff0;
+invader_table[5]     <= 52'h0_110_170_20_1_ff0;
+invader_table[6]     <= 52'h0_200_000_80_d_ff0;
 invader_table[7]     <= 52'h0_000_100_20_0_ff0;
 invader_table[8]     <= 52'h0_030_000_20_0_0ff;
 invader_table[9]     <= 52'h0_030_020_20_0_0ff;

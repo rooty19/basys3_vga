@@ -22,7 +22,6 @@ divider #(.targetfreq(32'd16))  div10 (clk, !sw[0], clk10);
 divider #(.targetfreq(32'd500))  div100 (clk, !sw[0], clk100);
 divider #(.targetfreq(32'd25175000))  div25M (clk, !sw[0], clk25M);
 
-
 logic   [7:0]   ps_numT, ps_numU;
 logic   [19:0]  vaddr;
 logic   [18:0]  read_grobalA, read_vramA, write_vramA, write_grobalA;
@@ -32,6 +31,7 @@ always_ff @(posedge clk25M) {Hsync, Vsync} <= {Hsyncd, Vsyncd};
 always_ff @(posedge clk25M) display_en <= display_end;
 
 logic   [9:0]  whpos, wvpos;
+logic   [1:0]  gcount;
 //write vpos/hpos
 assign whpos = hpos;
 assign wvpos = ((vpos<480-32) & hpos<640)? (vpos+32) : (492<=vpos & hpos < 640) ? (vpos-492) : 9'b0;
@@ -67,7 +67,7 @@ dynamic_led dynamic_led (
     ps_numT[7:4],
     ps_numT[3:0],
     ps_numU[7:4],
-    ps_numU[3:0],
+    {2'b0, gcount},
     an,
     {seg, dp}
 );
@@ -85,7 +85,8 @@ gamefsm gamefsm(
     write_vramA, write_ENA,
     write_vramB, write_ENB,
     vdin,
-    ps_numT, ps_numU
+    ps_numT, ps_numU,
+    gcount
 );
 
 // address converter

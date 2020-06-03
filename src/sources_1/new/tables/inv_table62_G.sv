@@ -47,6 +47,7 @@ invader_table[45]    <= 52'h0_000_000_20_0_000;
 invader_table[46]    <= 52'h0_000_000_20_0_000;
 invader_table[47]    <= 52'h0_000_000_20_0_000;
 invader_table[48]    <= 52'h0_000_000_20_0_000;
+invader_table[49]    <= 52'h0_000_000_00_0_000;
 invader_table[50]    <= 52'h0_1c0_000_20_1_fff;
 invader_table[51]    <= 52'h0_000_000_20_0_000;
 invader_table[52]    <= 52'h0_000_000_20_0_000;

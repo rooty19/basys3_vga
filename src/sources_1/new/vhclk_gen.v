@@ -1,3 +1,7 @@
+/*
+This code is Copied from :http://yuji2yuji.hatenablog.com/entry/2019/08/21/144446
+and Modified (add cs-reg)
+*/
 
 /*
 Video sync generator, used to drive a simulated CRT.

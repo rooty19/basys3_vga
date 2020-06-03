@@ -1,4 +1,4 @@
-invader_tableTEMP[0]     <= 52'h0_000_000_20_0_ff0;
+invader_tableTEMP[0]     <= 52'h0_000_000_80_7_ff0;
 invader_tableTEMP[1]     <= 52'h0_000_020_20_0_ff0;
 invader_tableTEMP[2]     <= 52'h0_000_040_20_0_ff0;
 invader_tableTEMP[3]     <= 52'h0_000_060_20_0_ff0;

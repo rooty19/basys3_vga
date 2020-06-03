@@ -1,4 +1,4 @@
-`include "BRAM_test.sv"
+`include "RAM_test.sv"
 module gamefsm (
     input   logic           clk, reset, clk25M, clk60,
     input   logic           swf2, swf1, swf0,
@@ -12,7 +12,8 @@ module gamefsm (
     output  logic   [18:0]  write_vramC,
     output  logic           write_ENC,
     output  logic   [11:0]  dinB,
-    input   logic   [7:0]   ps_numT, ps_numU
+    input   logic   [7:0]   ps_numT, ps_numU,
+    output  logic   [1:0]   gcount
 );
 
 /*
@@ -29,13 +30,22 @@ logic   [51:0]   invader_table     [0:62];
 logic   [51:0]   invader_tableTEMP [0:62];
 
 // ステートとフラグ
-logic   [2:0]   table_upS;
+logic   [4:0]   table_upS;
 logic   [6:0]   invMS;
 logic           invMSEN;
 logic   [1:0]   movearg; // 0^ 1> 2v 3<
 logic   [1:0]   moveNext;
 logic   [4:0]   umoveC;
 logic           movelock; // 1 .. locked
+
+logic          goverF;
+logic          clearF;
+//logic   [1:0]  gcount;
+logic   [8:0]  score;
+
+logic   [51:0] GT00, GT01, GT02, GT03; 
+logic   [51:0] GTOV;
+
 
 // 描写座標用
 logic   [7:0]    invT_pV           [0:62];
@@ -54,12 +64,13 @@ logic   [7:0]   rrom_size  [62:0];
 logic   [62:0]  rrom_whpos;
 logic   [62:0]  rrom_wvpos;
 logic   [62:0]  rrom_clear;
-logic   [2:0]   rrom_ID [62:0];
+logic   [3:0]   rrom_ID [62:0];
 
 logic   [11:0]  colorpallet;
 
 // レーザー用
 logic   [39:0]  laser_table   [0:39];
+logic   [39:0]  laser_tableTEMP   [0:39];
 logic   [39:0]  lase_ren;
 logic   [5:0]   lase_rens;
 logic   [39:0]  lase_EN;
@@ -77,12 +88,15 @@ logic   [4:0]   short_PS;
 logic   lase_hCD;
 logic   lase_vCD;
 
+assign  clearF = (rrom_EN == {1'b1, 62'b0}) ? 1'b1 : 1'b0;
+
 assign  lase_hCD = lase_whpos[invMS] & lase_whpos[0];
 assign  lase_vCD = lase_wvpos[invMS] & lase_wvpos[0];
 
 // Output
-logic   [11:0]  dinA0, dinA1, dinA2, dinA3, dinA4, dinA5, dinA6, dinA7, dinA8;
-logic   [7:0]   csA;
+logic   [11:0]  dinA0, dinA1, dinA2, dinA3, dinA4, dinA5, dinA6, dinA7, dinA8, dinA9;
+logic   [11:0]  dinAa, dinAb, dinAc, dinAd, dinAe, dinAf, dinAx;
+logic   [15:0]   csA;
 logic   [18:0]  write_vramB;
 logic           write_ENB;
 
@@ -95,34 +109,76 @@ assign invT_p12 = invT_pV[rrom_rens] * rrom_size[rrom_rens] + invT_pH[rrom_rens]
 assign lase_cepos = rrom_hpos[short_PS] + (rrom_size[short_PS]/2);
 assign lase_chpos = rrom_hpos[62]+17;
 
-BRAM_test #(.Dword(1024),  .Dwidth(1), .initfile("picture/parrot12.txt")) BRAM_00 (
+// Table
+RAM_test #(.Dword(63),  .Dwidth(52), .style("distributed"), .initfile("tables/gametable00.txt")) BRAM_GT00 (
+    clk25M, 1'b0, invMS, 52'h0, GT00
+);
+RAM_test #(.Dword(63),  .Dwidth(52), .style("distributed"), .initfile("tables/gametable01.txt")) BRAM_GT01 (
+    clk25M, 1'b0, invMS, 52'h0, GT01
+);
+RAM_test #(.Dword(63),  .Dwidth(52), .style("distributed"), .initfile("tables/gametable02.txt")) BRAM_GT02 (
+    clk25M, 1'b0, invMS, 52'h0, GT02
+);
+RAM_test #(.Dword(63),  .Dwidth(52), .style("distributed"), .initfile("tables/gametable03.txt")) BRAM_GT03 (
+    clk25M, 1'b0, invMS, 52'h0, GT03
+);
+RAM_test #(.Dword(63),  .Dwidth(52), .style("distributed"), .initfile("gameover.txt")) BRAM_GTOV (
+    clk25M, 1'b0, invMS, 52'h0, GTOV
+);
+
+// Texture
+RAM_test #(.Dword(1024),  .Dwidth(1), .style("distributed"), .initfile("picture/canon.txt")) BRAM_00 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA0
 );
-BRAM_test #(.Dword(1024),  .Dwidth(1), .initfile("picture/space.txt")) BRAM_01 (
+RAM_test #(.Dword(1024),  .Dwidth(1), .style("distributed"), .initfile("picture/invader.txt")) BRAM_01 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA1
 );
-BRAM_test #(.Dword(1024),  .Dwidth(12), .initfile("picture/space12.txt")) BRAM_02 (
+RAM_test #(.Dword(1024),  .Dwidth(1), .style("distributed"), .initfile("picture/octopus.txt")) BRAM_02 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA2
 );
-BRAM_test #(.Dword(1024),  .Dwidth(12), .initfile("picture/space12.txt")) BRAM_03 (
+RAM_test #(.Dword(1024),  .Dwidth(1), .style("distributed"), .initfile("picture/unarist12.txt")) BRAM_03 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA3
 );
-BRAM_test #(.Dword(1024),  .Dwidth(12), .initfile("picture/space12.txt")) BRAM_04 (
+RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/amd32.txt")) BRAM_04 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA4
 );
-BRAM_test #(.Dword(1024),  .Dwidth(12), .initfile("picture/space12.txt")) BRAM_05 (
+RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/amd32.txt")) BRAM_05 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA5
 );
-BRAM_test #(.Dword(16384), .Dwidth(12), .initfile("picture/unarist_N.txt")) BRAM_06 (
+RAM_test #(.Dword(1024), .Dwidth(12), .style("distributed"), .initfile("picture/amd32.txt")) BRAM_06 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA6
 );
-BRAM_test #(.Dword(16384), .Dwidth(12), .initfile("picture/unarist_L.txt")) BRAM_07 (
+RAM_test #(.Dword(1024), .Dwidth(12), .style("distributed"), .initfile("picture/amd32.txt")) BRAM_07 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA7
+);
+RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/digilent32.txt")) BRAM_08 (
+    clk25M, 1'b0, invT_p12, 12'h000, dinA8
+);
+RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/amd32.txt")) BRAM_09 (
+    clk25M, 1'b0, invT_p12, 12'h000, dinA9
+);
+RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/xilinx32.txt")) BRAM_0A (
+    clk25M, 1'b0, invT_p12, 12'h000, dinAa
+);
+RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/parrot12.txt")) BRAM_0B (
+    clk25M, 1'b0, invT_p12, 12'h000, dinAb
+);
+RAM_test #(.Dword(16384),  .Dwidth(12), .style("BLOCK"), .initfile("picture/asai.txt")) BRAM_0C (
+    clk25M, 1'b0, invT_p12, 12'h000, dinAc
+);
+RAM_test #(.Dword(16384),  .Dwidth(12), .style("BLOCK"), .initfile("picture/ikebe.txt")) BRAM_0D (
+    clk25M, 1'b0, invT_p12, 12'h000, dinAd
+);
+RAM_test #(.Dword(16384),  .Dwidth(12), .style("BLOCK"), .initfile("picture/initial.txt")) BRAM_0E (
+    clk25M, 1'b0, invT_p12, 12'h000, dinAe
+);
+RAM_test #(.Dword(16384),  .Dwidth(4), .style("BLOCK"), .initfile("picture/over.txt")) BRAM_0F (
+    clk25M, 1'b0, invT_p12, 12'h000, dinAf
 );
 
 always_ff @(posedge clk25M) begin
         if(reset)begin
-            `include "tables/inv_table62.sv"
+            `include "tables/inv_table62_Z.sv"
             `include "tables/inv_tableTEMP62.sv"
             `include "tables/laser_table39.sv"
             
@@ -133,11 +189,60 @@ always_ff @(posedge clk25M) begin
             moveNext <= 1'b1;
             movelock <= 1'b0;
             umoveC <= 0;
-            dinA8 <= 12'h000;
+            dinAx <= 12'h000;
             rrom_clear <= 62'h0;
+            table_upS <= 5'b00000;
+            score <= 9'd0;
+            gcount <= 0;
         end else begin
-            `include "gamebody.sv"
-            else begin
+            if(clk60&(invMSEN == 0))begin // フレーム間処理の開始
+                invMSEN <= 1'b1;
+                movearg <= moveNext;
+                movelock <= 0;
+                //table_upS <= 3'b000;
+                rrom_clear <= 62'h0;
+                `include "tables/invT_init.sv"
+            end else if(invMSEN)begin
+                if(table_upS == 5'b00000)begin
+                    if(btnU) begin
+                        table_upS <= 5'b00001;
+                        goverF <= 0;
+                        invMSEN <= 0;
+                    end else begin
+                        table_upS <= 5'b00000;
+                        goverF <= goverF;
+                        invMSEN <= 0;
+                    end    
+                end else if(table_upS == 5'b00001)begin
+                    case(gcount)
+                        2'b00 : invader_table[invMS] <= GT00;
+                        2'b01 : invader_table[invMS] <= GT01;
+                        2'b10 : invader_table[invMS] <= GT02;
+                        2'b11 : invader_table[invMS] <= GT03;
+                    endcase    
+                    invMS <= (invMS == 62) ? 0 : invMS + 1;
+                    invMSEN <= (invMS == 62) ? 0 : 1;
+                    table_upS <= (invMS == 62) ? 5'b00010 : 5'b00001;
+                end
+                `include "gamebody.sv"
+                else if(table_upS == 5'b01011)begin
+                    if(invMS < 40) laser_table[invMS] <= 40'h0;
+                    invader_table[invMS] <= GTOV;
+                    invMS <= (invMS == 62) ? 0 : invMS + 1;
+                    invMSEN <= (invMS == 62) ? 0 : 1;
+                    table_upS <= (invMS == 62) ? 5'b00000 : 5'b01011;
+                    gcount <= 0;
+                    score <= 0;
+                end else if(table_upS == 5'b01100) begin
+                    if(invMS < 40) laser_table[invMS] <= 40'h0;
+                    invader_table[invMS] <= GT01;
+                    invMS <= (invMS == 62) ? 0 : invMS + 1;
+                    invMSEN <= (invMS == 62) ? 0 : 1;
+                    table_upS <= (invMS == 62) ? 5'b00000 : 5'b01100;
+                    if (invMS == 62) gcount <= gcount + 1;
+                end
+            end begin
+            //else begin
                 if((rrom_rens < 63) & (rrom_ren[rrom_rens]) & (write_ENA))begin
                     invT_pH[rrom_rens] <= (whpos==rrom_hpos[rrom_rens]) ? 0 : (whpos==rrom_hpos[rrom_rens]+rrom_size[rrom_rens]-1) ? 0 : invT_pH[rrom_rens] + 1;
                     invT_pV[rrom_rens] <= (whpos==rrom_hpos[rrom_rens]+rrom_size[rrom_rens]-1) ? invT_pV[rrom_rens] + 1 : invT_pV[rrom_rens];
@@ -151,36 +256,52 @@ always_ff @(posedge clk25M) begin
         end 
         if(rrom_rens < 63)begin
             case(rrom_ID[rrom_rens])
-                3'd0 : csA <= 1;
-                3'd1 : csA <= 1<<1;
-                3'd2 : csA <= 1<<2;
-                3'd3 : csA <= 1<<3;
-                3'd4 : csA <= 1<<4;
-                3'd5 : csA <= 1<<5;
-                3'd6 : csA <= 1<<6;
-                3'd7 : csA <= 1<<7;
+                4'h0 : csA <= 1;
+                4'h1 : csA <= 1<<1;
+                4'h2 : csA <= 1<<2;
+                4'h3 : csA <= 1<<3;
+                4'h4 : csA <= 1<<4;
+                4'h5 : csA <= 1<<5;
+                4'h6 : csA <= 1<<6;
+                4'h7 : csA <= 1<<7;
+                4'h8 : csA <= 1<<8;
+                4'h9 : csA <= 1<<9;
+                4'ha : csA <= 1<<10;
+                4'hb : csA <= 1<<11;
+                4'hc : csA <= 1<<12;
+                4'hd : csA <= 1<<13;    
+                4'he : csA <= 1<<14;    
+                4'hf : csA <= 1<<15;                                
             endcase
-            dinA8 <= 12'h000;
+            dinAx <= 12'h000;
         end else if(lase_rens < 40)begin
             csA <= 0;
-            dinA8 <= lase_color[lase_rens];
+            dinAx <= lase_color[lase_rens];
         end else begin
             csA <= 0;
-            dinA8 <= 12'h000;
+            dinAx <= 12'h000;
         end    
 end
 
 always_ff @(posedge clk25M)begin
     case(csA)
-        8'b00000001 : dinB <= dinA0 * colorpallet;
-        8'b00000010 : dinB <= dinA1 * colorpallet;
-        8'b00000100 : dinB <= dinA2;
-        8'b00001000 : dinB <= dinA3;
-        8'b00010000 : dinB <= dinA4;
-        8'b00100000 : dinB <= dinA5;
-        8'b01000000 : dinB <= dinA6;
-        8'b10000000 : dinB <= dinA7;
-        default : dinB <= dinA8;
+        16'b0000000000000001 : dinB <= dinA0 * colorpallet;
+        16'b0000000000000010 : dinB <= dinA1 * colorpallet;
+        16'b0000000000000100 : dinB <= dinA2 * colorpallet;
+        16'b0000000000001000 : dinB <= dinA3 * colorpallet;
+        16'b0000000000010000 : dinB <= dinA4;
+        16'b0000000000100000 : dinB <= dinA5;
+        16'b0000000001000000 : dinB <= dinA6;
+        16'b0000000010000000 : dinB <= dinA7;
+        16'b0000000100000000 : dinB <= dinA8;
+        16'b0000001000000000 : dinB <= dinA9;
+        16'b0000010000000000 : dinB <= dinAa;
+        16'b0000100000000000 : dinB <= dinAb;
+        16'b0001000000000000 : dinB <= dinAc;
+        16'b0010000000000000 : dinB <= dinAd;
+        16'b0100000000000000 : dinB <= dinAe;  
+        16'b1000000000000000 : dinB <= {dinAf[3:0], dinAf[3:0], dinAf[3:0]}; 
+        default : dinB <= dinAx;
     endcase    
 end
 
@@ -250,7 +371,7 @@ assign  lase_rens = lase_ren[0] ? 6'd0 :
                     lase_ren[39] ? 6'd39:
                     6'd40;
 
-assign  rrom_rens = rrom_ren[0] ? 6'd0 :
+assign  rrom_rens = rrom_ren[0] ? 6'd0:
                     rrom_ren[1] ? 6'd1:
                     rrom_ren[2] ? 6'd2:
                     rrom_ren[3] ? 6'd3:

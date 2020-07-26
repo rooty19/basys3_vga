@@ -1,4 +1,5 @@
 basys3_vga/*
+basys3_vga_pic
 *.jou
 *.log
 src/sources_1/ip/blk_mem_gen_0

@@ -10,8 +10,9 @@
 #include <cmath>
 #include <vector>
 #include <bitset> 
+#include <boost/dynamic_bitset.hpp>
 using namespace std;
-string VER = "0.0.2";
+string VER = "0.1.0";
 bool debug = false;
 int outfile;
 string fiex;
@@ -23,10 +24,11 @@ void mam(){
     cout << "Usage: $ bmp2coe -[v/q/r] [file.bmp] [Bit per Color]" << endl;
     cout << "Convert BMP to Memory init File" << endl;
     cout << "Bitmap File support: 1 and 24bit" << endl;
+    cout << "Note: 4/8/16/32 bit format is not supported." << endl;
     cout << endl;
     cout << "Function::" << endl;;
-    cout << "1 bit Bitmap ... Convert A two-dimensional array(X-Y)" << endl;
-    cout << "24bit Bitmap ... Convert A two-dimensional array(Color-Address)" << endl;
+    cout << "1 bit Bitmap ... Convert to Horizontal-Vertical array" << endl;
+    cout << "24bit Bitmap ... Convert to Color(RGB)-Address array" << endl;
     cout << endl;
     cout << "Options::" << endl;
     cout << "\t-v\toutput file for vivado   (.coe)" << endl;
@@ -99,16 +101,19 @@ void bitbcut(string fstream, vector<vector<uint8_t>> &pallet ,unsigned int start
 void bit24cut(string fstream, unsigned long startbyte, unsigned int bpl, string Nfilename, unsigned int index, unsigned bpc){
     unsigned int Bpl = bpl/8;
     uint8_t linebyte[Bpl] = {0};
+    uint8_t tempa;
     for(int i=0;i<Bpl;i++)linebyte[i] = static_cast<uint8_t>(fstream[i+startbyte]);
     ofstream oout(Nfilename+fiex, ios::app);
     for(int i=0;i<Bpl/3;i++){
         if(outfile==1) oout << index*(Bpl/3)+i << " : "; 
-        for(int j=0;j<3;j++){
-            uint8_t tempa = linebyte[3*i+j]*(pow(2,bpc)-1)/255;
+        for(int j=2;j>=0;j--){
+            tempa = linebyte[3*i+j]*(pow(2,bpc)-1)/255;
+            boost::dynamic_bitset<> bs(bpc, tempa);
             //uint8_t tempa = linebyte[3*i+j]*15/255;
             //oout << setw(2) << setfill('0') << hex << +linebyte[3*i+j];
-            oout << setw(1) << setfill('0') << hex << +tempa;
-        }
+            //oout << ((bpc<=4) ? setw(1) : setw(2)) << setfill('0') << hex << +tempa;
+            oout << bs;
+        } 
         if(outfile==1) oout << ";";
         oout << endl;
     }
@@ -209,7 +214,6 @@ int main(int argc, char *argv[]){
             ofstream oout(Nfilename+fiex, ios::trunc);
             if(outfile == 0){
                 if(bcBitCount==1)oout << "memory_initialization_radix=2;" << endl;
-                else oout << "memory_initialization_radix=16;" << endl;
                 oout << "memory_initialization_vector=" << endl;
                 oout.close();
             }else if(outfile == 1){
@@ -221,10 +225,10 @@ int main(int argc, char *argv[]){
                     oout << "DATA_RADIX=BIN;\n" << endl;
                     oout << "CONTENT BEGIN" << endl;
                 }else{
-                    oout << "WIDTH=24;" << endl;
+                    oout << "WIDTH=" << (bpc*3) << endl;
                     oout << "DEPTH=" << bcwidth*bcheight << ";" << endl;
                     oout << "ADDRESS_RADIX=UNS;" << endl;
-                    oout << "DATA_RADIX=HEX;\n" << endl;
+                    oout << "DATA_RADIX=BIN;\n" << endl;
                     oout << "CONTENT BEGIN" << endl;
                 }
                 oout.close();

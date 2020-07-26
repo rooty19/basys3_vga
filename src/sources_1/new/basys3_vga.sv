@@ -10,7 +10,8 @@ module basys3_vga(
     input   logic            btnC, btnU, btnL, btnR, btnD,
     output  logic   [7:0]    JA,
     output  logic   [3:0]    vgaRed, vgaBlue, vgaGreen,
-    output  logic            Hsync, Vsync
+    output  logic            Hsync, Vsync,
+    output  logic   [15:0]   led
 );
 
 logic   clk10, clk100, clk25M;
@@ -50,24 +51,41 @@ logic           RvramCS, WvramCS;
 assign RvramCS = vramCS;
 assign vdout = (!RvramCS)? vdoutA : vdoutB;
 
-logic  clk60;
+logic  clk60, pulse60;
+logic  [6:0]    count60;
 assign clk60 = ((vpos == 480) & (hpos == 0)) ? 1 : 0;
+assign pulse60 = (count60<60)? 1:0;
+
+always_ff @(posedge clk60) begin
+    if(!sw[1]) count60 <= 0;
+    count60 <= (count60 == 119) ? 0 : count60 + 1;
+end
 
 always_ff @(posedge clk25M) WvramCS <= RvramCS;
-assign {vgaBlue, vgaGreen, vgaRed} = (display_en) ? vdout : 12'h000;
+assign {vgaRed, vgaGreen, vgaBlue} = (display_en) ? vdout : 12'h000;
 
+logic   [4:0]   table_upS;
+logic   [8:0]   inscore;
+logic   [15:0]  disscore;
+logic           scoreen;
+
+assign  scoreen = (table_upS == 5'b00000) ? pulse60 : 1'b1;
+assign  led = {scoreen, 15'b0};
 m_seq_test m_seq_test (
     clk10, !sw[0], ps_numT, ps_numU
 );
+
+hdconverter hdconverter(inscore,disscore);
 
 //dynamic_led dynamic_led (clk100, !sw[1], count[15:12], count[11:8], count[7:4], count[3:0], an, {seg, dp});
 dynamic_led dynamic_led (
     clk100,
     !sw[1],
-    ps_numT[7:4],
-    ps_numT[3:0],
-    ps_numU[7:4],
-    {2'b0, gcount},
+    scoreen,
+    disscore[15:12],
+    disscore[11:8],
+    disscore[7:4],
+    disscore[3:0],
     an,
     {seg, dp}
 );
@@ -86,7 +104,9 @@ gamefsm gamefsm(
     write_vramB, write_ENB,
     vdin,
     ps_numT, ps_numU,
-    gcount
+    gcount,
+    inscore,
+    table_upS
 );
 
 // address converter
@@ -143,7 +163,7 @@ end
 endmodule
 
 module dynamic_led(
-    input   logic           clk, reset, // clk is 1~16ms
+    input   logic           clk, reset, en,// clk is 1~16ms
     input   logic   [3:0]   seg3, seg2, seg1, seg0,
     output  logic   [3:0]   ANs, // AN3, AN2, AN1, AN0
     output  logic   [7:0]   seg
@@ -192,7 +212,7 @@ module dynamic_led(
         endcase
     end
 
-    assign seg = {!se[1], !se[2], !se[3], !se[4], !se[5], !se[6], !se[7], !se[0]};
+    assign seg = (en) ? {!se[1], !se[2], !se[3], !se[4], !se[5], !se[6], !se[7], !se[0]} : 8'b11111111;
 endmodule
 
 module divider #(
@@ -249,4 +269,14 @@ module barwriter(
     end
 
     always_ff @(posedge clk25M) {wvaddr_out, vwen_out} <= {wvaddr, vwen};
+endmodule
+
+module hdconverter(
+    input   [8:0]   ins,
+    output  [15:0]  outs
+);
+    assign outs[15:12] = (ins>=100)? ins/100 : 0;
+    assign outs[11:8] = (ins>=10)? ((ins>=100) ? (ins-(outs[15:12]*100))/10 : ins/10) : 0;
+    assign outs[7:4] = (ins - outs[15:12]*100 - outs[11:8]*10);
+    assign outs[3:0] = 0;
 endmodule

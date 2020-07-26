@@ -1,4 +1,6 @@
 `include "RAM_test.sv"
+`include "RAM_testB.sv"
+
 module gamefsm (
     input   logic           clk, reset, clk25M, clk60,
     input   logic           swf2, swf1, swf0,
@@ -13,16 +15,17 @@ module gamefsm (
     output  logic           write_ENC,
     output  logic   [11:0]  dinB,
     input   logic   [7:0]   ps_numT, ps_numU,
-    output  logic   [1:0]   gcount
+    output  logic   [1:0]   gcount,
+    output  logic   [8:0]   score,
+    output  logic   [4:0]   table_upS
 );
 
 /*
-invader table align (word: 0: canon, 1-49 invader)
-invader exist(1/0 : 2bit) | ID (6bit) | start vpos(0-480 12bit) | start hpos(0-640 12bit) | color (0x000-0xfff 12bit)
+invader table align (word: 0 null, 1-61 invader, 62 cannon)
+invader exist(1/0 : 4bit) | start vpos(0-480 12bit) | start hpos(0-640 12bit) | size(8bit)| ID(4bit) | color (0x000-0xfff 12bit)
 
-laser
 laser table align (word 0 cannon, 1-40 laser)
-laser exist (1/0 : 2bit)| ID (2bit) | retu(0-14 (4bit)) | gyo(0-640 12bit) | color (0x000-0xfff 12bit)
+laser exist (1/0 : 4bit)| start vpos(0-480 12bit) | start hpos(0-640 12bit) | color (0x000-0xfff 12bit)
 */
 
 // Invader Table RAM
@@ -30,7 +33,7 @@ logic   [51:0]   invader_table     [0:62];
 logic   [51:0]   invader_tableTEMP [0:62];
 
 // ステートとフラグ
-logic   [4:0]   table_upS;
+//logic   [4:0]   table_upS;
 logic   [6:0]   invMS;
 logic           invMSEN;
 logic   [1:0]   movearg; // 0^ 1> 2v 3<
@@ -41,10 +44,10 @@ logic           movelock; // 1 .. locked
 logic          goverF;
 logic          clearF;
 //logic   [1:0]  gcount;
-logic   [8:0]  score;
+//logic   [8:0]  score;
 
 logic   [51:0] GT00, GT01, GT02, GT03; 
-logic   [51:0] GTOV;
+logic   [51:0] GTOV, GTCO, GTCC;
 
 
 // 描写座標用
@@ -67,6 +70,8 @@ logic   [62:0]  rrom_clear;
 logic   [3:0]   rrom_ID [62:0];
 
 logic   [11:0]  colorpallet;
+logic   [3:0]   speeds;
+assign speeds = (swf0) ? speed : gcount + 1;
 
 // レーザー用
 logic   [39:0]  laser_table   [0:39];
@@ -106,7 +111,7 @@ assign invT_pVs = invT_pV[rrom_rens];
 assign invT_pHs = invT_pH[rrom_rens];
 assign invT_p12 = invT_pV[rrom_rens] * rrom_size[rrom_rens] + invT_pH[rrom_rens];
 
-assign lase_cepos = rrom_hpos[short_PS] + (rrom_size[short_PS]/2);
+assign lase_cepos = rrom_hpos[short_PS] + (rrom_size[short_PS]>>1);
 assign lase_chpos = rrom_hpos[62]+17;
 
 // Table
@@ -125,54 +130,61 @@ RAM_test #(.Dword(63),  .Dwidth(52), .style("distributed"), .initfile("tables/ga
 RAM_test #(.Dword(63),  .Dwidth(52), .style("distributed"), .initfile("gameover.txt")) BRAM_GTOV (
     clk25M, 1'b0, invMS, 52'h0, GTOV
 );
+RAM_test #(.Dword(63),  .Dwidth(52), .style("distributed"), .initfile("tables/continue.txt")) BRAM_GTCO (
+    clk25M, 1'b0, invMS, 52'h0, GTCO
+);
+RAM_test #(.Dword(63),  .Dwidth(52), .style("distributed"), .initfile("tables/clear.txt")) BRAM_GTCC (
+    clk25M, 1'b0, invMS, 52'h0, GTCC
+);
+
 
 // Texture
-RAM_test #(.Dword(1024),  .Dwidth(1), .style("distributed"), .initfile("picture/canon.txt")) BRAM_00 (
+RAM_testB #(.Dword(1024),  .Dwidth(1), .style("distributed"), .initfile("picture_git/canon.txt")) BRAM_00 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA0
 );
-RAM_test #(.Dword(1024),  .Dwidth(1), .style("distributed"), .initfile("picture/invader.txt")) BRAM_01 (
+RAM_testB #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture_git/tux32.txt")) BRAM_01 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA1
 );
-RAM_test #(.Dword(1024),  .Dwidth(1), .style("distributed"), .initfile("picture/octopus.txt")) BRAM_02 (
+RAM_testB #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture_git/yuka_yappari.txt")) BRAM_02 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA2
 );
-RAM_test #(.Dword(1024),  .Dwidth(1), .style("distributed"), .initfile("picture/unarist12.txt")) BRAM_03 (
+RAM_testB #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture_git/unarist.txt")) BRAM_03 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA3
 );
-RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/amd32.txt")) BRAM_04 (
+RAM_testB #(.Dword(16384),  .Dwidth(4), .style("BLOCK"), .initfile("picture_git/credit_git.txt")) BRAM_04 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA4
 );
-RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/amd32.txt")) BRAM_05 (
+RAM_testB #(.Dword(4096),  .Dwidth(12), .style("distributed"), .initfile("picture_git/tux64.txt")) BRAM_05 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA5
 );
-RAM_test #(.Dword(1024), .Dwidth(12), .style("distributed"), .initfile("picture/amd32.txt")) BRAM_06 (
+RAM_testB #(.Dword(16384), .Dwidth(12), .style("BLOCK"), .initfile("picture_git/continue.txt")) BRAM_06 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA6
 );
-RAM_test #(.Dword(1024), .Dwidth(12), .style("distributed"), .initfile("picture/amd32.txt")) BRAM_07 (
+RAM_testB #(.Dword(1024), .Dwidth(1), .style("distributed"), .initfile("picture_git/space32.txt")) BRAM_07 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA7
 );
-RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/digilent32.txt")) BRAM_08 (
+RAM_testB #(.Dword(4096),  .Dwidth(12), .style("distributed"), .initfile("picture_git/yuka_gue64.txt")) BRAM_08 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA8
 );
-RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/amd32.txt")) BRAM_09 (
+RAM_testB #(.Dword(16384),  .Dwidth(12), .style("BLOCK"), .initfile("picture_git/ai.txt")) BRAM_09 (
     clk25M, 1'b0, invT_p12, 12'h000, dinA9
 );
-RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/xilinx32.txt")) BRAM_0A (
+RAM_testB #(.Dword(4096),  .Dwidth(12), .style("BLOCK"), .initfile("picture_git/ion1.txt")) BRAM_0A (
     clk25M, 1'b0, invT_p12, 12'h000, dinAa
 );
-RAM_test #(.Dword(1024),  .Dwidth(12), .style("distributed"), .initfile("picture/parrot12.txt")) BRAM_0B (
+RAM_testB #(.Dword(4096),  .Dwidth(12), .style("BLOCK"), .initfile("picture_git/ion2.txt")) BRAM_0B (
     clk25M, 1'b0, invT_p12, 12'h000, dinAb
 );
-RAM_test #(.Dword(16384),  .Dwidth(12), .style("BLOCK"), .initfile("picture/asai.txt")) BRAM_0C (
+RAM_testB #(.Dword(4096),  .Dwidth(12), .style("BLOCK"), .initfile("picture_git/ion3.txt")) BRAM_0C (
     clk25M, 1'b0, invT_p12, 12'h000, dinAc
 );
-RAM_test #(.Dword(16384),  .Dwidth(12), .style("BLOCK"), .initfile("picture/ikebe.txt")) BRAM_0D (
+RAM_testB #(.Dword(4096),  .Dwidth(12), .style("BLOCK"), .initfile("picture_git/ion4.txt")) BRAM_0D (
     clk25M, 1'b0, invT_p12, 12'h000, dinAd
 );
-RAM_test #(.Dword(16384),  .Dwidth(12), .style("BLOCK"), .initfile("picture/initial.txt")) BRAM_0E (
+RAM_testB #(.Dword(16384),  .Dwidth(12), .style("BLOCK"), .initfile("picture_git/initial.txt")) BRAM_0E (
     clk25M, 1'b0, invT_p12, 12'h000, dinAe
 );
-RAM_test #(.Dword(16384),  .Dwidth(4), .style("BLOCK"), .initfile("picture/over.txt")) BRAM_0F (
+RAM_testB #(.Dword(16384),  .Dwidth(4), .style("BLOCK"), .initfile("picture_git/gameover.txt")) BRAM_0F (
     clk25M, 1'b0, invT_p12, 12'h000, dinAf
 );
 
@@ -206,6 +218,7 @@ always_ff @(posedge clk25M) begin
                 if(table_upS == 5'b00000)begin
                     if(btnU) begin
                         table_upS <= 5'b00001;
+                        score <= (goverF) ? 0 : score;
                         goverF <= 0;
                         invMSEN <= 0;
                     end else begin
@@ -220,25 +233,25 @@ always_ff @(posedge clk25M) begin
                         2'b10 : invader_table[invMS] <= GT02;
                         2'b11 : invader_table[invMS] <= GT03;
                     endcase    
+                    invader_tableTEMP[invMS] <= 56'h0;
                     invMS <= (invMS == 62) ? 0 : invMS + 1;
                     invMSEN <= (invMS == 62) ? 0 : 1;
                     table_upS <= (invMS == 62) ? 5'b00010 : 5'b00001;
                 end
                 `include "gamebody.sv"
-                else if(table_upS == 5'b01011)begin
+                else if(table_upS == 5'b01100)begin
                     if(invMS < 40) laser_table[invMS] <= 40'h0;
                     invader_table[invMS] <= GTOV;
                     invMS <= (invMS == 62) ? 0 : invMS + 1;
                     invMSEN <= (invMS == 62) ? 0 : 1;
-                    table_upS <= (invMS == 62) ? 5'b00000 : 5'b01011;
+                    table_upS <= (invMS == 62) ? 5'b00000 : 5'b01100;
                     gcount <= 0;
-                    score <= 0;
-                end else if(table_upS == 5'b01100) begin
+                end else if(table_upS == 5'b01101) begin
                     if(invMS < 40) laser_table[invMS] <= 40'h0;
-                    invader_table[invMS] <= GT01;
+                    invader_table[invMS] <= (gcount != 3) ? GTCO : GTCC;
                     invMS <= (invMS == 62) ? 0 : invMS + 1;
                     invMSEN <= (invMS == 62) ? 0 : 1;
-                    table_upS <= (invMS == 62) ? 5'b00000 : 5'b01100;
+                    table_upS <= (invMS == 62) ? 5'b00000 : 5'b01101;
                     if (invMS == 62) gcount <= gcount + 1;
                 end
             end begin
@@ -286,13 +299,13 @@ end
 always_ff @(posedge clk25M)begin
     case(csA)
         16'b0000000000000001 : dinB <= dinA0 * colorpallet;
-        16'b0000000000000010 : dinB <= dinA1 * colorpallet;
-        16'b0000000000000100 : dinB <= dinA2 * colorpallet;
+        16'b0000000000000010 : dinB <= dinA1;
+        16'b0000000000000100 : dinB <= dinA2;
         16'b0000000000001000 : dinB <= dinA3 * colorpallet;
-        16'b0000000000010000 : dinB <= dinA4;
+        16'b0000000000010000 : dinB <= {dinA4[3:0], dinA4[3:0], dinA4[3:0]};
         16'b0000000000100000 : dinB <= dinA5;
         16'b0000000001000000 : dinB <= dinA6;
-        16'b0000000010000000 : dinB <= dinA7;
+        16'b0000000010000000 : dinB <= dinA7 * colorpallet;
         16'b0000000100000000 : dinB <= dinA8;
         16'b0000001000000000 : dinB <= dinA9;
         16'b0000010000000000 : dinB <= dinAa;
